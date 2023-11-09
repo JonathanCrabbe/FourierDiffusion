@@ -26,9 +26,9 @@ class DummyDatamodule(Datamodule):
     def prepare_data(self) -> None:
         super().prepare_data()
 
-        self.X_train = torch.randn((batch_size, M, N), dtype=torch.float32)
+        self.X_train = torch.randn((10 * batch_size, M, N), dtype=torch.float32)
         self.y_train = torch.randint(
-            low=low, high=high, size=(batch_size,), dtype=torch.long
+            low=low, high=high, size=(10 * batch_size,), dtype=torch.long
         )
         self.X_test = torch.randn_like(self.X_train)
         self.y_test = torch.randint_like(self.y_train, low=low, high=high)
