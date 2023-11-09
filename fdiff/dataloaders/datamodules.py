@@ -23,8 +23,12 @@ class DiffusionDataset(Dataset):
     def __len__(self) -> int:
         return len(self.X)
 
-    def __getitem__(self, index) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
-        return {"X": self.X[index], "y": self.y[index] if self.y is not None else None}
+    def __getitem__(self, index) -> dict[str, torch.Tensor]:
+        data = {}
+        data["X"] = self.X[index]
+        if self.y is not None:
+            data["y"] = self.y[index]
+        return data
 
 
 class Datamodule(pl.LightningDataModule, ABC):
@@ -38,9 +42,9 @@ class Datamodule(pl.LightningDataModule, ABC):
         self.random_seed = random_seed
         self.batch_size = batch_size
         self.X_train = torch.Tensor()
-        self.y_train = None
+        self.y_train: Optional[torch.Tensor] = None
         self.X_test = torch.Tensor()
-        self.y_test = None
+        self.y_test: Optional[torch.Tensor] = None
 
     def prepare_data(self) -> None:
         if not self.data_dir.exists():
@@ -120,15 +124,3 @@ class ECGDatamodule(Datamodule):
     @property
     def dataset_name(self) -> str:
         return "ecg"
-
-
-if __name__ == "__main__":
-    datamodule = ECGDatamodule()
-    datamodule.prepare_data()
-    dataloader = datamodule.train_dataloader()
-    for batch in dataloader:
-        X = batch.X
-        for x in X:
-            sns.lineplot(x=range(187), y=x.squeeze().numpy())
-            plt.show()
-        break
