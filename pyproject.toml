@@ -1,0 +1,75 @@
+[project]
+name = "fdiff" 
+
+version = "0.1.0"
+
+description = "Time series diffusion ib the frequency domain."  
+
+readme = "README.md"
+
+requires-python = ">=3.10"
+
+license = {file = "LICENSE.txt"}
+
+keywords = ["diffusion", "time", "series", "fourier", "frequency", "generative", "machine", "learning", "ai"]
+
+authors = [
+  {name = "Jonathan Crabbé", email = "jonathan.cr1302@gmail.com" },
+  {name = "Nicolas Huynh", email = "nicolas.huynh99@gmail.com" }
+]
+
+maintainers = [
+  {name = "Jonathan Crabbé", email = "jonathan.cr1302@gmail.com" }
+]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+
+  "Intended Audience :: Researchers",
+
+  "Topic :: Generative AI :: Diffusion",
+
+  "License :: OSI Approved :: MIT License",
+
+  "Programming Language :: Python :: 3.10",
+]
+
+dependencies = [
+  "torch",
+  "lightning",
+]
+
+
+[project.optional-dependencies]
+test = [
+  "coverage", 
+  "pytest", 
+  "mypy", 
+  "pre-commit"
+]
+
+[project.urls] 
+"Homepage" = "https://github.com/JonathanCrabbe/FourierDiffusion/"
+"Source" = "https://github.com/JonathanCrabbe/FourierDiffusion/"
+
+[build-system]
+# These are the assumed default build requirements from pip:
+# https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support
+requires = ["setuptools>=43.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+# Pytest options
+minversion = "6.0"
+addopts = "-ra -q --mypy"
+testpaths = [
+    "tests",
+]
+
+[tool.mypy]
+python_version = "3.10.8"
+warn_return_any = true
+warn_unused_configs = true
+exclude = [
+    '^file1\.py$',  # TOML literal string (single-quotes, no escaping necessary)
+]
