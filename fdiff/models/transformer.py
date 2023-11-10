@@ -6,7 +6,7 @@ from einops import rearrange
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, max_len: int = 5000):
+    def __init__(self, d_model: int, max_len: int):
         super().__init__()
 
         # Position vector broadcasted accross batch dimension
