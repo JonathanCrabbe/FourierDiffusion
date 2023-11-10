@@ -4,10 +4,8 @@ from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
 from typing import Optional
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import pytorch_lightning as pl
-import seaborn as sns
 import torch
 from torch.utils.data import DataLoader, Dataset
 

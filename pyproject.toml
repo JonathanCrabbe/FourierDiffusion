@@ -3,7 +3,7 @@ name = "fdiff"
 
 version = "0.1.0"
 
-description = "Time series diffusion ib the frequency domain."  
+description = "Time series diffusion in the frequency domain."  
 
 readme = "README.md"
 
@@ -37,15 +37,23 @@ classifiers = [
 dependencies = [
   "torch",
   "lightning",
+  "kaggle",
+  "seaborn",
+  "pandas",
+  "diffusers['torch'] transformers",
 ]
 
 
 [project.optional-dependencies]
 test = [
+  "pytest",
   "coverage", 
-  "pytest", 
   "mypy", 
-  "pre-commit"
+  "black",
+  "pytest-cov",
+  "pytest-mypy",
+  "pytest-black",
+  "pre-commit",
 ]
 
 [project.urls] 
@@ -59,9 +67,8 @@ requires = ["setuptools>=43.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-# Pytest options
 minversion = "6.0"
-addopts = "-ra -q --cov --cov-report html --mypy --black"
+addopts = "-ra -q --mypy --black --cov --cov-report html --cov-report term"
 testpaths = [
     "tests",
 ]

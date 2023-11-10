@@ -1,2 +1,2 @@
-# FourierDiffusion
+# Fourier Diffusion
  
