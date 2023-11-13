@@ -8,16 +8,10 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model: int, max_len: int):
         super().__init__()
 
-        # Position vector broadcasted accross batch dimension
-        position = torch.arange(max_len).unsqueeze(0)  # (1, max_len)
-
         # Learnable Embedding matrix to map time steps to embeddings
         self.embedding = nn.Embedding(
             num_embeddings=max_len, embedding_dim=d_model, max_norm=math.sqrt(d_model)
         )  # (max_len, d_emb)
-
-        # Positional encodings broadcasted accross batch dimension
-        self.pe = self.embedding(position)  # (1, max_len, d_emb)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Adds a positional encoding to the tensor x.
@@ -28,7 +22,9 @@ class PositionalEncoding(nn.Module):
         Returns:
             torch.Tensor: Tensor with an additional positional encoding
         """
-        x = x + self.pe
+        position = torch.arange(x.size(1)).unsqueeze(0)  # (1, max_len)
+        pe = self.embedding(position)  # (1, max_len, d_emb)
+        x = x + pe
         return x
 
 

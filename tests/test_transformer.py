@@ -26,7 +26,7 @@ def test_positional_encoding():
     for b in range(batch_size):
         for l in range(max_len):
             assert torch.allclose(
-                (enc_out - X)[b, l, :], pos_encoder.pe[0, l, :], atol=EPS
+                (enc_out - X)[b, l, :], pos_encoder.embedding.weight[l, :], atol=EPS
             )
 
 
