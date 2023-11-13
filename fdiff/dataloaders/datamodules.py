@@ -36,6 +36,7 @@ class Datamodule(pl.LightningDataModule, ABC):
         random_seed: int = 42,
         batch_size: int = 32,
     ) -> None:
+        super().__init__()
         self.data_dir = data_dir / self.dataset_name
         self.random_seed = random_seed
         self.batch_size = batch_size
@@ -91,8 +92,6 @@ class ECGDatamodule(Datamodule):
         )
 
     def prepare_data(self) -> None:
-        super().prepare_data()
-
         # Read CSV; extract features and labels
         path_train = self.data_dir / "mitbih_train.csv"
         path_test = self.data_dir / "mitbih_test.csv"

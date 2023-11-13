@@ -5,8 +5,8 @@ import torch
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.utils.dataclasses import DiffusableBatch
 
-N = 30
-M = 3
+max_len = 30
+n_channels = 3
 batch_size = 32
 low = 0
 high = 10
@@ -24,9 +24,9 @@ class DummyDatamodule(Datamodule):
         )
 
     def prepare_data(self) -> None:
-        super().prepare_data()
-
-        self.X_train = torch.randn((10 * batch_size, M, N), dtype=torch.float32)
+        self.X_train = torch.randn(
+            (10 * batch_size, max_len, n_channels), dtype=torch.float32
+        )
         self.y_train = torch.randint(
             low=low, high=high, size=(10 * batch_size,), dtype=torch.long
         )
@@ -47,5 +47,5 @@ def test_dataloader():
     dataloader = datamodule.train_dataloader()
     for batch in dataloader:
         assert isinstance(batch, DiffusableBatch)
-        assert batch.X.shape == (batch_size, M, N)
+        assert batch.X.shape == (batch_size, max_len, n_channels)
         assert batch.y.shape == (batch_size,)
