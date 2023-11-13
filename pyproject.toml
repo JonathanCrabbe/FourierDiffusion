@@ -57,6 +57,7 @@ test = [
   "pytest-cov",
   "pytest-mypy",
   "pytest-black",
+  "pytest-isort",
   "pre-commit",
 ]
 
