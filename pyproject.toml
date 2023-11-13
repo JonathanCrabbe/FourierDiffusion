@@ -73,7 +73,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra --mypy --black --cov --cov-report html --cov-report term"
+addopts = "-ra --isort --mypy --black --cov --cov-report html --cov-report term"
 testpaths = [
     "tests",
 ]
