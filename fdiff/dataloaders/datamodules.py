@@ -106,9 +106,9 @@ class ECGDatamodule(Datamodule):
         y_test = df_test.iloc[:, 187].values
 
         # Convert to tensor
-        self.X_train = torch.tensor(X_train, dtype=torch.float32).unsqueeze(1)
+        self.X_train = torch.tensor(X_train, dtype=torch.float32).unsqueeze(2)
         self.y_train = torch.tensor(y_train, dtype=torch.long)
-        self.X_test = torch.tensor(X_test, dtype=torch.float32).unsqueeze(1)
+        self.X_test = torch.tensor(X_test, dtype=torch.float32).unsqueeze(2)
         self.y_test = torch.tensor(y_test, dtype=torch.long)
 
     def download_data(self) -> None:
