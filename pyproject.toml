@@ -9,7 +9,7 @@ readme = "README.md"
 
 requires-python = ">=3.10"
 
-license = {file = "LICENSE.txt"}
+license = {file = "LICENSE"}
 
 keywords = ["diffusion", "time", "series", "fourier", "frequency", "generative", "machine", "learning", "ai"]
 
@@ -36,11 +36,15 @@ classifiers = [
 
 dependencies = [
   "torch",
+  "torchvision",
+  "torchaudio",
   "lightning",
   "kaggle",
   "seaborn",
   "pandas",
-  "diffusers['torch'] transformers",
+  "diffusers[torch]",
+  "transformers",
+  "ipython",
 ]
 
 

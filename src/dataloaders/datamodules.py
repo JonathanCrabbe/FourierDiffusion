@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from fdiff.utils.dataclasses import collate_batch
+from src.utils.dataclasses import collate_batch
 
 
 class DiffusionDataset(Dataset):
