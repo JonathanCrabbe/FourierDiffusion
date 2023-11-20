@@ -2,7 +2,7 @@ import logging
 import os
 from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 import pytorch_lightning as pl
@@ -74,13 +74,30 @@ class Datamodule(pl.LightningDataModule, ABC):
         return DataLoader(
             test_set,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=False,
+            collate_fn=collate_batch,
+        )
+
+    def val_dataloader(self) -> DataLoader:
+        test_set = DiffusionDataset(X=self.X_test, y=self.y_test)
+        return DataLoader(
+            test_set,
+            batch_size=self.batch_size,
+            shuffle=False,
             collate_fn=collate_batch,
         )
 
     @abstractproperty
     def dataset_name(self) -> str:
         ...
+
+    @property
+    def dataset_parameters(self) -> dict[str, Any]:
+        return {
+            "n_channels": self.X_train.size(2),
+            "max_len": self.X_train.size(1),
+            "num_training_steps": len(self.train_dataloader()),
+        }
 
 
 class ECGDatamodule(Datamodule):
