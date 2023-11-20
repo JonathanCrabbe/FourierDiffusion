@@ -28,7 +28,7 @@ def hydra_config(request):
         config_file = request.param
         config = compose(
             config_file,
-            overrides=[f"++datamodule.data_dir='./data'"],
+            overrides=["++datamodule.data_dir='./data'"],
         )
         instantiate(config)
     return config
