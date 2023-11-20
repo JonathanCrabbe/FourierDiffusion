@@ -24,7 +24,7 @@ class TrainingRunner:
 
         # Set-up dataset
         self.datamodule.prepare_data()
-        self.datamodule.setup()
+        self.datamodule.setup("fit")
 
         # Finish instantiation of the model if necessary
         if isinstance(self.score_model, partial):
