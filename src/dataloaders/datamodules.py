@@ -32,11 +32,14 @@ class DiffusionDataset(Dataset):
 class Datamodule(pl.LightningDataModule, ABC):
     def __init__(
         self,
-        data_dir: Path = Path.cwd() / "data",
+        data_dir: Path | str = Path.cwd() / "data",
         random_seed: int = 42,
         batch_size: int = 32,
     ) -> None:
         super().__init__()
+        # Cast data_dir to Path type
+        if isinstance(data_dir, str):
+            data_dir = Path(data_dir)
         self.data_dir = data_dir / self.dataset_name
         self.random_seed = random_seed
         self.batch_size = batch_size
@@ -83,7 +86,7 @@ class Datamodule(pl.LightningDataModule, ABC):
 class ECGDatamodule(Datamodule):
     def __init__(
         self,
-        data_dir: Path = Path.cwd() / "data",
+        data_dir: Path | str = Path.cwd() / "data",
         random_seed: int = 42,
         batch_size: int = 32,
     ) -> None:
@@ -91,7 +94,7 @@ class ECGDatamodule(Datamodule):
             data_dir=data_dir, random_seed=random_seed, batch_size=batch_size
         )
 
-    def prepare_data(self) -> None:
+    def setup(self, stage: str = "fit") -> None:
         # Read CSV; extract features and labels
         path_train = self.data_dir / "mitbih_train.csv"
         path_test = self.data_dir / "mitbih_test.csv"

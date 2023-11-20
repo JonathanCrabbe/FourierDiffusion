@@ -28,7 +28,7 @@ class DummyDatamodule(Datamodule):
         self.n_channels = n_channels
         self.batch_size = batch_size
 
-    def prepare_data(self) -> None:
+    def setup(self, stage: str = "fit") -> None:
         self.X_train = torch.randn(
             (10 * self.batch_size, self.max_len, self.n_channels), dtype=torch.float32
         )
@@ -49,6 +49,7 @@ class DummyDatamodule(Datamodule):
 def test_dataloader():
     datamodule = DummyDatamodule()
     datamodule.prepare_data()
+    datamodule.setup()
     dataloader = datamodule.train_dataloader()
     for batch in dataloader:
         assert isinstance(batch, DiffusableBatch)
