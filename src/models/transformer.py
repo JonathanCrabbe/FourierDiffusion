@@ -22,7 +22,7 @@ class PositionalEncoding(nn.Module):
         Returns:
             torch.Tensor: Tensor with an additional positional encoding
         """
-        position = torch.arange(x.size(1)).unsqueeze(0)  # (1, max_len)
+        position = torch.arange(x.size(1), device=x.device).unsqueeze(0)  # (1, max_len)
         pe = self.embedding(position)  # (1, max_len, d_emb)
         x = x + pe
         return x
