@@ -157,3 +157,4 @@ cython_debug/
 # Folders
 data/
 lightning_logs/
+outputs/

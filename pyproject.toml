@@ -45,6 +45,7 @@ dependencies = [
   "diffusers[torch]",
   "transformers",
   "ipython",
+  "hydra-core",
 ]
 
 
