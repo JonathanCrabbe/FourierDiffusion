@@ -20,7 +20,6 @@ class ScoreModule(pl.LightningModule):
         d_model: int = 60,
         num_layers: int = 3,
         n_head: int = 12,
-        num_warmup_steps: int = 100,
         num_training_steps: int = 1000,
     ) -> None:
         super().__init__()
@@ -32,7 +31,7 @@ class ScoreModule(pl.LightningModule):
         self.max_time = noise_scheduler.config.num_train_timesteps
         assert isinstance(self.max_time, int)
         self.noise_scheduler = noise_scheduler
-        self.num_warmup_steps = num_warmup_steps
+        self.num_warmup_steps = num_training_steps // 10
         self.num_training_steps = num_training_steps
 
         # Model components
@@ -102,7 +101,38 @@ class ScoreModule(pl.LightningModule):
         # Predict noise from score model
         noise_pred = self.forward(noisy_batch)
         loss = F.mse_loss(noise_pred, noise)
+        self.log_dict({"train_loss": loss}, prog_bar=True, batch_size=len(batch))
         return loss
+
+    def validation_step(
+        self, batch: DiffusableBatch, batch_idx: int, dataloader_idx: int = 0
+    ) -> None:
+        # Get X and timesteps
+        X = batch.X
+        timesteps = batch.timesteps
+
+        # If no timesteps are provided, sample them randomly
+        if timesteps is None:
+            timesteps = torch.randint(
+                low=0,
+                high=self.max_time,
+                size=(len(batch),),
+                dtype=torch.long,
+                device=batch.device,
+            )
+
+        # Sample noise from distribution and add it to X
+        noise = torch.randn_like(X, device=batch.device)
+        assert hasattr(self.noise_scheduler, "add_noise")
+        X_noisy = self.noise_scheduler.add_noise(
+            original_samples=X, noise=noise, timesteps=timesteps
+        )
+        noisy_batch = DiffusableBatch(X=X_noisy, y=batch.y, timesteps=timesteps)
+
+        # Predict noise from score model
+        noise_pred = self.forward(noisy_batch)
+        loss = F.mse_loss(noise_pred, noise)
+        self.log_dict({"val_loss": loss}, prog_bar=True, batch_size=len(batch))
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         optimizer = optim.AdamW(self.parameters())
