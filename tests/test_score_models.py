@@ -27,7 +27,6 @@ def instantiate_score_model() -> ScoreModule:
         d_model=d_model,
         n_head=n_head,
         num_layers=num_layers,
-        num_warmup_steps=5,
         num_training_steps=10,
     )
     return score_model
