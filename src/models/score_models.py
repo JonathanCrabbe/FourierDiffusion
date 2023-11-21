@@ -101,7 +101,7 @@ class ScoreModule(pl.LightningModule):
         # Predict noise from score model
         noise_pred = self.forward(noisy_batch)
         loss = F.mse_loss(noise_pred, noise)
-        self.log_dict({"train_loss": loss}, prog_bar=True, batch_size=len(batch))
+        self.log_dict({"train/loss": loss}, prog_bar=True, batch_size=len(batch))
         return loss
 
     def validation_step(
@@ -132,7 +132,7 @@ class ScoreModule(pl.LightningModule):
         # Predict noise from score model
         noise_pred = self.forward(noisy_batch)
         loss = F.mse_loss(noise_pred, noise)
-        self.log_dict({"val_loss": loss}, prog_bar=True, batch_size=len(batch))
+        self.log_dict({"val/loss": loss}, prog_bar=True, batch_size=len(batch))
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         optimizer = optim.AdamW(self.parameters())

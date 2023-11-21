@@ -10,6 +10,7 @@ from omegaconf import DictConfig
 from dataloaders.datamodules import Datamodule
 from models.score_models import ScoreModule
 from utils.extraction import flatten_config, get_training_params
+from utils.wandb import maybe_initialize_wandb
 
 
 class TrainingRunner:
@@ -23,6 +24,9 @@ class TrainingRunner:
         logging.info(
             f"Welcome in the training script! You are using the following config:\n{flatten_config(cfg)}"
         )
+
+        # Maybe initialize wandb
+        maybe_initialize_wandb(cfg)
 
         # Instatiate all the components
         self.score_model: ScoreModule = instantiate(cfg.score_model)

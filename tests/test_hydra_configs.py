@@ -35,7 +35,10 @@ def hydra_config(request):
                     f"Config file {config_file} does not correspond to a dictionnary"
                 )
         # Try to compose and instantiate the configuration
-        config = compose(config_file, overrides=["++datamodule.data_dir='./data'"])
+        config = compose(
+            config_file,
+            overrides=["++datamodule.data_dir='./data'", "++trainer.logger=False"],
+        )
         instantiate(config)
     return config
 
