@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 
 import hydra
@@ -6,15 +7,22 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
-from src.dataloaders.datamodules import Datamodule
-from src.models.score_models import ScoreModule
+from dataloaders.datamodules import Datamodule
+from models.score_models import ScoreModule
+from utils.extraction import flatten_config, get_training_params
 
 
 class TrainingRunner:
     def __init__(self, cfg: DictConfig) -> None:
+        # Initialize torch
         torch.manual_seed(cfg.random_seed)
         if torch.cuda.is_available():
             torch.set_float32_matmul_precision("high")
+
+        # Read out the config
+        logging.info(
+            f"Welcome in the training script! You are using the following config:\n{flatten_config(cfg)}"
+        )
 
         # Instatiate all the components
         self.score_model: ScoreModule = instantiate(cfg.score_model)
@@ -27,7 +35,8 @@ class TrainingRunner:
 
         # Finish instantiation of the model if necessary
         if isinstance(self.score_model, partial):
-            self.score_model = self.score_model(**self.datamodule.dataset_parameters)
+            training_params = get_training_params(self.datamodule, self.trainer)
+            self.score_model = self.score_model(**training_params)
 
     def train(self) -> None:
         self.trainer.fit(model=self.score_model, datamodule=self.datamodule)
