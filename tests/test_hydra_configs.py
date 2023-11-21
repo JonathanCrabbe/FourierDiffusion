@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+import yaml
 from hydra import compose, initialize
 from hydra.utils import instantiate
 from omegaconf import DictConfig
@@ -26,10 +27,15 @@ def hydra_config(request):
     with initialize(config_path="../cmd/conf"):
         # Load YAML configuration file
         config_file = request.param
-        config = compose(
-            config_file,
-            overrides=["++datamodule.data_dir='./data'"],
-        )
+        # Check that the YAML file corresponds to a dictionnary
+        with open(Path.cwd() / "cmd/conf" / config_file, "r") as f:
+            config_dict = yaml.safe_load(f)
+            if not isinstance(config_dict, dict):
+                pytest.skip(
+                    f"Config file {config_file} does not correspond to a dictionnary"
+                )
+        # Try to compose and instantiate the configuration
+        config = compose(config_file, overrides=["++datamodule.data_dir='./data'"])
         instantiate(config)
     return config
 

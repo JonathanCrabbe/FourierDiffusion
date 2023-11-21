@@ -3,3 +3,6 @@ accelerator: auto
 max_epochs: 50
 gradient_clip_val: 1.0
 enable_progress_bar: true
+
+defaults:
+  - callbacks: default
