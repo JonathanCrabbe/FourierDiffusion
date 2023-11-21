@@ -1,6 +1,6 @@
 _target_: pytorch_lightning.Trainer
 accelerator: auto
-max_epochs: 50
+max_epochs: 200
 gradient_clip_val: 1.0
 enable_progress_bar: true
 logger:
