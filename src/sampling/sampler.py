@@ -72,7 +72,9 @@ class DiffusionSampler:
             for t in self.noise_scheduler.timesteps:
                 # Define timesteps for the batch
 
-                timesteps = torch.full((batch_size,), t, dtype=torch.long)
+                timesteps = torch.full(
+                    (batch_size,), t, dtype=torch.long, device=self.score_model.device
+                )
 
                 # Create diffusable batch
                 batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
