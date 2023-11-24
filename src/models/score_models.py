@@ -21,6 +21,7 @@ class ScoreModule(pl.LightningModule):
         num_layers: int = 3,
         n_head: int = 12,
         num_training_steps: int = 1000,
+        lr_max: float = 1e-3,
     ) -> None:
         super().__init__()
 
@@ -33,6 +34,7 @@ class ScoreModule(pl.LightningModule):
         self.noise_scheduler = noise_scheduler
         self.num_warmup_steps = num_training_steps // 10
         self.num_training_steps = num_training_steps
+        self.lr_max = lr_max
 
         # Model components
         self.pos_encoder = PositionalEncoding(d_model=d_model, max_len=self.max_len)
@@ -45,6 +47,9 @@ class ScoreModule(pl.LightningModule):
         self.backbone = nn.TransformerEncoder(
             encoder_layer=transformer_layer, num_layers=num_layers
         )
+
+        # Save all hyperparameters for checkpointing
+        self.save_hyperparameters()
 
     def forward(self, batch: DiffusableBatch) -> torch.Tensor:
         X = batch.X
@@ -147,7 +152,7 @@ class ScoreModule(pl.LightningModule):
         )
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        optimizer = optim.AdamW(self.parameters())
+        optimizer = optim.AdamW(self.parameters(), lr=self.lr_max)
         lr_scheduler = get_cosine_schedule_with_warmup(
             optimizer=optimizer,
             num_warmup_steps=self.num_warmup_steps,
