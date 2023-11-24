@@ -30,7 +30,6 @@ class SamplingRunner:
         # Number of steps and samples
         self.num_samples: int = cfg.num_samples
         self.num_diffusion_steps: int = cfg.num_diffusion_steps
-        self
 
         # Load score model from checkpoint
         self.score_model = ScoreModule.load_from_checkpoint(
