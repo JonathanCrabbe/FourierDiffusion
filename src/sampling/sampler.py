@@ -69,7 +69,7 @@ class DiffusionSampler:
             )
 
             timesteps = torch.full(
-                (batch_size,), t, dtype=torch.long, device=self.score_model.device
+                (batch_size,), 1, dtype=torch.long, device=self.score_model.device
             )
 
             batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
