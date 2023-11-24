@@ -8,7 +8,7 @@ from omegaconf import DictConfig
 
 from models.score_models import ScoreModule
 from sampling.sampler import DiffusionSampler
-from utils.extraction import flatten_config
+from utils.extraction import flatten_config, get_best_checkpoint
 
 
 class SamplingRunner:
@@ -32,8 +32,11 @@ class SamplingRunner:
         self.num_diffusion_steps: int = cfg.num_diffusion_steps
 
         # Load score model from checkpoint
+        chekcpoint_dir = self.model_path / self.model_id / "checkpoints"
+        best_checkpoint_path = get_best_checkpoint(chekcpoint_dir)
+
         self.score_model = ScoreModule.load_from_checkpoint(
-            self.model_path / self.model_id
+            checkpoint_path=best_checkpoint_path
         )
         if torch.cuda.is_available():
             self.score_model.to(device=torch.device("cuda"))

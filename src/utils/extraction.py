@@ -1,3 +1,5 @@
+import re
+from pathlib import Path
 from typing import Any
 
 import pytorch_lightning as pl
@@ -47,3 +49,23 @@ def flatten_config(cfg: DictConfig | dict) -> dict[str, Any]:
         elif k not in {"_target_", "_partial_"}:
             cfg_flat[k] = v
     return cfg_flat
+
+
+def get_best_checkpoint(checkpoint_path: Path) -> Path:
+    """Get the path to the best checkpoint of a model.
+
+    Args:
+        checkpoint_path (Path): Path to the model.
+
+    Returns:
+        Path: Path to the best checkpoint.
+    """
+    # Get the path to the best checkpoint
+    pattern = r"(.+?)epoch=(\d+)-val_loss=(\d+\.\d+).ckpt"
+    best_loss = float("inf")
+    for checkpoint in checkpoint_path.glob("*.ckpt"):
+        loss = float(re.match(pattern, str(checkpoint)).group(3))
+        if loss < best_loss:
+            best_loss = loss
+            best_checkpoint_path = checkpoint
+    return best_checkpoint_path
