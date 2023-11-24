@@ -58,7 +58,7 @@ class WassersteinDistances:
         return unit_vector
 
     
-    def get_directions(
+    def get_random_directions(
         self,
         n_directions: int
     ) -> list[np.ndarray]:
