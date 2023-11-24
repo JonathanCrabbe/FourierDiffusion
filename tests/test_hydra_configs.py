@@ -37,7 +37,11 @@ def hydra_config(request):
         # Try to compose and instantiate the configuration
         config = compose(
             config_file,
-            overrides=["++datamodule.data_dir='./data'", "++trainer.logger=False"],
+            overrides=[
+                "++datamodule.data_dir='./data'",
+                "++trainer.logger=False",
+                "++model_path=./lightning_logs",
+            ],
         )
         instantiate(config)
     return config
