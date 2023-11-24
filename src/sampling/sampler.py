@@ -68,17 +68,19 @@ class DiffusionSampler:
                 device=self.score_model.device,
             )
 
+            timesteps = torch.full(
+                (batch_size,), t, dtype=torch.long, device=self.score_model.device
+            )
+
+            batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
+
             # Perform the diffusion step by step
             for t in self.noise_scheduler.timesteps:
                 # Define timesteps for the batch
                 print(t)
 
-                timesteps = torch.full(
-                    (batch_size,), t, dtype=torch.long, device=self.score_model.device
-                )
-
                 # Create diffusable batch
-                batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
+                # batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
 
                 # Return denoised X
                 X = self.reverse_diffusion_step(batch)
