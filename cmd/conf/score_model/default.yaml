@@ -3,7 +3,7 @@ _partial_: true
 d_model: 72
 num_layers: 10
 n_head: 12
-lr_max: 1.0e-4
+lr_max: 1.0e-3
 
 defaults:
   - noise_scheduler: ddpm
