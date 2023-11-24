@@ -71,6 +71,7 @@ class DiffusionSampler:
             # Perform the diffusion step by step
             for t in self.noise_scheduler.timesteps:
                 # Define timesteps for the batch
+                print(t)
 
                 timesteps = torch.full(
                     (batch_size,), t, dtype=torch.long, device=self.score_model.device
