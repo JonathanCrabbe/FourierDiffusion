@@ -30,7 +30,7 @@ class WassersteinDistances:
         self,
         original_data: np.ndarray,
         other_data: np.ndarray,
-        normalisation: str,
+        normalisation: Optional[str] = "none",
         seed: Optional[int] = None,
     ) -> None:
         self.original_data = original_data
@@ -155,3 +155,26 @@ class WassersteinDistances:
             sd = np.std(orig)
             return orig / sd, other / sd
         raise ValueError(f"Unrecognised normalisation type: {self.normalisation}")
+
+    def sliced_distances(self, num_directions: int) -> np.ndarray:
+        """Calculate the sliced Wasserstein distance between datasets.
+
+        Args:
+            num_directions (int): Number of directions in the sliced Wasserstein estimation.
+
+        Returns:
+            np.ndarray: distribution of Wasserstein distances over all directions.
+        """
+        directions = self.get_random_directions(num_directions)
+        distances = [self.directional_distance(direction) for direction in directions]
+        return np.array(distances)
+
+    def marginal_distances(self) -> np.ndarray:
+        """Calculate the marginal Wasserstein distances between datasets.
+
+        Returns:
+            np.ndarray: distribution of Wasserstein distances over all features.
+        """
+        n_features = self.original_data.shape[1]
+        distances = [self.feature_distance(feature) for feature in range(n_features)]
+        return np.array(distances)

@@ -1,9 +1,10 @@
 model_path: ${hydra:runtime.cwd}/lightning_logs
 model_id: ub0lv98f
-num_samples: 128
+num_samples: 1000
 num_diffusion_steps: 1000
 random_seed: 42
 
 defaults:
   - _self_
   - sampler: default
+  - datamodule: ecg

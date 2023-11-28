@@ -1,9 +1,9 @@
 [project]
-name = "fdiff" 
+name = "fdiff"
 
 version = "0.1.0"
 
-description = "Time series diffusion in the frequency domain."  
+description = "Time series diffusion in the frequency domain."
 
 readme = "README.md"
 
@@ -47,14 +47,15 @@ dependencies = [
   "ipython",
   "hydra-core",
   "wandb",
+  "POT",
 ]
 
 
 [project.optional-dependencies]
 test = [
   "pytest",
-  "coverage", 
-  "mypy", 
+  "coverage",
+  "mypy",
   "black",
   "pytest-cov",
   "pytest-mypy",
@@ -64,7 +65,7 @@ test = [
   "pre-commit",
 ]
 
-[project.urls] 
+[project.urls]
 "Homepage" = "https://github.com/JonathanCrabbe/FourierDiffusion/"
 "Source" = "https://github.com/JonathanCrabbe/FourierDiffusion/"
 
