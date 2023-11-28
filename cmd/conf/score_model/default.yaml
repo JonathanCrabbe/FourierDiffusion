@@ -1,4 +1,4 @@
-_target_: src.models.score_models.ScoreModule
+_target_: fdiff.models.score_models.ScoreModule
 _partial_: true
 d_model: 72
 num_layers: 10

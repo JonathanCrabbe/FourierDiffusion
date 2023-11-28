@@ -1,6 +1,6 @@
 from omegaconf import DictConfig
 
-from utils.extraction import flatten_config
+from fdiff.utils.extraction import flatten_config
 
 
 def test_flatten_config():

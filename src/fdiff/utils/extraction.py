@@ -5,7 +5,7 @@ from typing import Any
 import pytorch_lightning as pl
 from omegaconf import DictConfig, OmegaConf
 
-from dataloaders.datamodules import Datamodule
+from fdiff.dataloaders.datamodules import Datamodule
 
 
 def get_training_params(datamodule: Datamodule, trainer: pl.Trainer) -> dict[str, Any]:

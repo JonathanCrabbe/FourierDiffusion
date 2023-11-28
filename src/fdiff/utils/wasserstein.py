@@ -2,9 +2,10 @@
     Code addapted form https://gitlab.developers.cam.ac.uk/maths/cia/covid-19-projects/missing_data_fitting_quality
 """
 
-import numpy as np
-import ot  
 from typing import Optional
+
+import numpy as np
+import ot
 
 
 class WassersteinDistances:
@@ -30,13 +31,12 @@ class WassersteinDistances:
         original_data: np.ndarray,
         other_data: np.ndarray,
         normalisation: str,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
     ) -> None:
         self.original_data = original_data
         self.other_data = other_data
         self.normalisation = normalisation
         self.rng = np.random.default_rng(seed)
-
 
     def random_direction(self, dim: int) -> np.ndarray:
         """Generate a unit vector in a random direction.
@@ -57,11 +57,7 @@ class WassersteinDistances:
         unit_vector = vector / vector_magnitude
         return unit_vector
 
-    
-    def get_random_directions(
-        self,
-        n_directions: int
-    ) -> list[np.ndarray]:
+    def get_random_directions(self, n_directions: int) -> list[np.ndarray]:
         """Get random directions for an experiment.
 
         Parameters
@@ -80,7 +76,6 @@ class WassersteinDistances:
         directions = [self.random_direction(dimension) for _ in range(n_directions)]
         return directions
 
-
     def get_marginal_directions(self) -> list[np.ndarray]:
         """Get marginal directions for an experiment.
 
@@ -95,7 +90,6 @@ class WassersteinDistances:
         dimension = self.original_data.shape[1]
         directions = [np.identity(dimension)[i] for i in range(dimension)]
         return directions
-
 
     def feature_distance(self, feature: int) -> float:
         """Calculate the dataset distance for a specific feature.
@@ -117,9 +111,7 @@ class WassersteinDistances:
         """
         original = self.original_data[:, feature]
         other = self.other_data[:, feature]
-        original_normalised, other_normalised = self._normalise(
-            original, other
-        )
+        original_normalised, other_normalised = self._normalise(original, other)
         distance = ot.emd2_1d(original_normalised, other_normalised)
         distance = np.sqrt(distance)
         return distance
@@ -157,11 +149,9 @@ class WassersteinDistances:
     def _normalise(
         self, orig: np.ndarray, other: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
-        if self.normalisation == 'none':
+        if self.normalisation == "none":
             return orig, other
-        if self.normalisation == 'standardise':
+        if self.normalisation == "standardise":
             sd = np.std(orig)
             return orig / sd, other / sd
-        raise ValueError(
-            f"Unrecognised normalisation type: {self.normalisation}"
-        )
+        raise ValueError(f"Unrecognised normalisation type: {self.normalisation}")

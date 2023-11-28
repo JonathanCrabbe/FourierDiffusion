@@ -7,8 +7,8 @@ from diffusers import DDPMScheduler
 from diffusers.optimization import get_cosine_schedule_with_warmup
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
 
-from src.models.transformer import PositionalEncoding, TimeEncoding
-from src.utils.dataclasses import DiffusableBatch
+from fdiff.models.transformer import PositionalEncoding, TimeEncoding
+from fdiff.utils.dataclasses import DiffusableBatch
 
 
 class ScoreModule(pl.LightningModule):

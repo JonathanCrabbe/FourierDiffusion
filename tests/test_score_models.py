@@ -4,8 +4,8 @@ import pytorch_lightning as pl
 import torch
 from diffusers import DDPMScheduler
 
-from src.models.score_models import ScoreModule
-from src.utils.dataclasses import DiffusableBatch
+from fdiff.models.score_models import ScoreModule
+from fdiff.utils.dataclasses import DiffusableBatch
 
 from .test_datamodules import DummyDatamodule
 

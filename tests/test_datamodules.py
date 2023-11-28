@@ -2,8 +2,8 @@ from pathlib import Path
 
 import torch
 
-from src.dataloaders.datamodules import Datamodule
-from src.utils.dataclasses import DiffusableBatch
+from fdiff.dataloaders.datamodules import Datamodule
+from fdiff.utils.dataclasses import DiffusableBatch
 
 max_len = 30
 n_channels = 3

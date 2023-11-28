@@ -3,8 +3,8 @@ from typing import Optional
 import torch
 from tqdm import tqdm
 
-from models.score_models import ScoreModule
-from utils.dataclasses import DiffusableBatch
+from fdiff.models.score_models import ScoreModule
+from fdiff.utils.dataclasses import DiffusableBatch
 
 
 class DiffusionSampler:

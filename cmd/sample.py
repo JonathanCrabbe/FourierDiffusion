@@ -6,9 +6,9 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
-from models.score_models import ScoreModule
-from sampling.sampler import DiffusionSampler
-from utils.extraction import flatten_config, get_best_checkpoint
+from fdiff.models.score_models import ScoreModule
+from fdiff.sampling.sampler import DiffusionSampler
+from fdiff.utils.extraction import flatten_config, get_best_checkpoint
 
 
 class SamplingRunner:

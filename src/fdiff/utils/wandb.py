@@ -1,7 +1,7 @@
 from omegaconf import DictConfig
 
 import wandb
-from utils.extraction import flatten_config
+from fdiff.utils.extraction import flatten_config
 
 
 def maybe_initialize_wandb(cfg: DictConfig) -> str | None:

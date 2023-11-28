@@ -1,7 +1,7 @@
 from diffusers import DDPMScheduler
 
-from models.score_models import ScoreModule
-from sampling.sampler import DiffusionSampler
+from fdiff.models.score_models import ScoreModule
+from fdiff.sampling.sampler import DiffusionSampler
 
 n_channels = 3
 max_len = 50

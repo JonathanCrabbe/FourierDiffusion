@@ -1,6 +1,6 @@
 import torch
 
-from src.models.transformer import PositionalEncoding, TimeEncoding
+from fdiff.models.transformer import PositionalEncoding, TimeEncoding
 
 max_len = 20  # maximum time series length
 max_time = 100  # maximum diffusion time step

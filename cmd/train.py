@@ -7,10 +7,10 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
-from dataloaders.datamodules import Datamodule
-from models.score_models import ScoreModule
-from utils.extraction import flatten_config, get_training_params
-from utils.wandb import maybe_initialize_wandb
+from fdiff.dataloaders.datamodules import Datamodule
+from fdiff.models.score_models import ScoreModule
+from fdiff.utils.extraction import flatten_config, get_training_params
+from fdiff.utils.wandb import maybe_initialize_wandb
 
 
 class TrainingRunner:
