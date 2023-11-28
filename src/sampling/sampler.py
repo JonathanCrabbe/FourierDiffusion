@@ -1,6 +1,7 @@
 from typing import Optional
 
 import torch
+from tqdm import tqdm
 
 from models.score_models import ScoreModule
 from utils.dataclasses import DiffusableBatch
@@ -34,7 +35,9 @@ class DiffusionSampler:
         output = self.noise_scheduler.step(
             model_output=score, timestep=timesteps[0].item(), sample=X
         )
+
         X_prev = output.prev_sample
+
         return X_prev
 
     def sample(
@@ -57,31 +60,49 @@ class DiffusionSampler:
         # Compute the required amount of batches
         num_batches = num_samples // self.sample_batch_size
 
-        for batch_idx in range(num_batches):
-            # Compute the batch size
-            batch_size = min(
-                num_samples - batch_idx * self.sample_batch_size, self.sample_batch_size
-            )
-            # Sample from noise distribution
-            X = torch.randn(
-                (batch_size, self.max_len, self.n_channels),
-                device=self.score_model.device,
-            )
-
-            # Perform the diffusion step by step
-            for t in self.noise_scheduler.timesteps:
-                # Define timesteps for the batch
-                timesteps = torch.full(
-                    (batch_size,), t, dtype=torch.long, device=self.score_model.device
+        # No need to track gradients when sampling
+        with torch.no_grad():
+            for batch_idx in tqdm(
+                range(num_batches),
+                desc="Sampling",
+                unit="batch",
+                leave=False,
+                colour="blue",
+            ):
+                # Compute the batch size
+                batch_size = min(
+                    num_samples - batch_idx * self.sample_batch_size,
+                    self.sample_batch_size,
+                )
+                # Sample from noise distribution
+                X = torch.randn(
+                    (batch_size, self.max_len, self.n_channels),
+                    device=self.score_model.device,
+                    requires_grad=False,
                 )
 
-                # Create diffusable batch
-                batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
+                # Perform the diffusion step by step
+                for t in tqdm(
+                    self.noise_scheduler.timesteps,
+                    desc="Diffusion",
+                    unit="step",
+                    leave=False,
+                    colour="green",
+                ):
+                    # Define timesteps for the batch
+                    timesteps = torch.full(
+                        (batch_size,),
+                        t,
+                        dtype=torch.long,
+                        device=self.score_model.device,
+                        requires_grad=False,
+                    )
+                    # Create diffusable batch
+                    batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
+                    # Return denoised X
+                    X = self.reverse_diffusion_step(batch)
 
-                # Return denoised X
-                X = self.reverse_diffusion_step(batch)
-
-            # Add the samples to the list
-            all_samples.append(X.cpu())
+                # Add the samples to the list
+                all_samples.append(X.cpu())
 
         return torch.cat(all_samples, dim=0)
