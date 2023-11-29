@@ -34,7 +34,7 @@ jobs:
           black --check .
       - name: Check mypy
         run: |
-          mypy --install-types .
+          mypy .
       - name: Test with pytest
         run: |
           pytest
