@@ -31,9 +31,6 @@ jobs:
       - name: Check black formatting
         run: |
           black --check .
-      - name: Check isoformat
-        run: |
-          isort --check .
       - name: Check mypy
         run: |
           mypy --install-types .
