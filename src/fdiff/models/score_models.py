@@ -24,7 +24,6 @@ class ScoreModule(pl.LightningModule):
         lr_max: float = 1e-3,
     ) -> None:
         super().__init__()
-
         # Hyperparameters
         self.max_len = max_len
         self.n_channels = n_channels
