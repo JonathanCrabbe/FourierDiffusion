@@ -11,12 +11,9 @@ from omegaconf import DictConfig
 # Function to find all YAML files in a directory
 def find_yaml_files(directory: Path):
     yaml_files = []
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith(".yaml") or file.endswith(".yml"):
-                rel_dir = os.path.relpath(root, directory)
-                rel_path = os.path.join(rel_dir, file) if rel_dir != "." else file
-                yaml_files.append(rel_path)
+    for path in directory.glob("*.yaml"):
+        rel_path = os.path.relpath(str(path), directory)
+        yaml_files.append(rel_path)
     return yaml_files
 
 
