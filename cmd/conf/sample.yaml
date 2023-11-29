@@ -7,5 +7,4 @@ random_seed: 42
 defaults:
   - _self_
   - sampler: default
-  - datamodule: ecg
   - metrics: default

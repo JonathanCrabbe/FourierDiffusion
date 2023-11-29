@@ -4,7 +4,7 @@ from pathlib import Path
 import hydra
 import torch
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
@@ -26,22 +26,26 @@ class SamplingRunner:
             f"Welcome in the sampling script! You are using the following config:\n{dict_to_str(cfg)}"
         )
 
-        # Instantiate datamodule and random seed
-        self.datamodule: Datamodule = instantiate(cfg.datamodule)
-        self.datamodule.prepare_data()
-        self.datamodule.setup()
-
         # Get model path and id
         self.model_path = Path(cfg.model_path)
         self.model_id = cfg.model_id
+
+        # Save sampling config to model directory
+        save_dir = self.model_path / self.model_id
+        OmegaConf.save(config=cfg, f=save_dir / "sample_config.yaml")
+
+        # Read training config from model directory and instantiate the right datamodule
+        train_cfg = OmegaConf.load(save_dir / "train_config.yaml")
+        self.datamodule: Datamodule = instantiate(train_cfg.datamodule)
+        self.datamodule.prepare_data()
+        self.datamodule.setup()
 
         # Get number of steps and samples
         self.num_samples: int = cfg.num_samples
         self.num_diffusion_steps: int = cfg.num_diffusion_steps
 
         # Load score model from checkpoint
-        chekcpoint_dir = self.model_path / self.model_id / "checkpoints"
-        best_checkpoint_path = get_best_checkpoint(chekcpoint_dir)
+        best_checkpoint_path = get_best_checkpoint(save_dir / "checkpoints")
         self.score_model = ScoreModule.load_from_checkpoint(
             checkpoint_path=best_checkpoint_path
         )
