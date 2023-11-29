@@ -1,11 +1,13 @@
 import logging
+import os
 from functools import partial
+from pathlib import Path
 
 import hydra
 import pytorch_lightning as pl
 import torch
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
@@ -26,12 +28,18 @@ class TrainingRunner:
         )
 
         # Maybe initialize wandb
-        maybe_initialize_wandb(cfg)
+        run_id = maybe_initialize_wandb(cfg)
 
-        # Instatiate all the components
+        # Instantiate all the components
         self.score_model: ScoreModule = instantiate(cfg.score_model)
         self.trainer: pl.Trainer = instantiate(cfg.trainer)
         self.datamodule: Datamodule = instantiate(cfg.datamodule)
+
+        # Save the config to the log directory
+        save_dir = Path.cwd() / "lightning_logs" / run_id
+        os.makedirs(save_dir, exist_ok=True)
+        logging.info(f"Saving the config into {save_dir}.")
+        OmegaConf.save(config=cfg, f=save_dir / "train_config.yaml")
 
         # Set-up dataset
         self.datamodule.prepare_data()
