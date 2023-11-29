@@ -115,7 +115,7 @@ class WassersteinDistances:
         original_normalised, other_normalised = self._normalise(original, other)
         distance = ot.emd2_1d(original_normalised, other_normalised)
         distance = np.sqrt(distance)
-        return distance
+        return float(distance)
 
     def directional_distance(self, direction: np.ndarray) -> float:
         """Calculate the dataset distance in a specified direction.
@@ -141,11 +141,13 @@ class WassersteinDistances:
         original_normed, other_normed = self._normalise(original, other)
         distance = ot.emd2_1d(original_normed, other_normed)
         distance = np.sqrt(distance)
-        return distance
+        return float(distance)
 
     @staticmethod
     def _project(data: np.ndarray, direction: np.ndarray) -> np.ndarray:
-        return data @ direction
+        proj = data @ direction
+        assert isinstance(proj, np.ndarray)
+        return proj
 
     def _normalise(
         self, orig: np.ndarray, other: np.ndarray

@@ -75,6 +75,8 @@ class ScoreModule(pl.LightningModule):
         # Channel unembedding
         X = self.unembedder(X)
 
+        assert isinstance(X, torch.Tensor)
+
         return X
 
     def training_step(

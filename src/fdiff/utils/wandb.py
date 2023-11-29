@@ -12,6 +12,9 @@ def maybe_initialize_wandb(cfg: DictConfig) -> str | None:
             project="FourierDiffusion",
             config=cfg_flat,
         )
-        return wandb.run.id
+        assert wandb.run is not None
+        run_id = wandb.run.id
+        assert isinstance(run_id, str)
+        return run_id
     else:
         return None

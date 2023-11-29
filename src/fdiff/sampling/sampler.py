@@ -37,6 +37,7 @@ class DiffusionSampler:
         )
 
         X_prev = output.prev_sample
+        assert isinstance(X_prev, torch.Tensor)
 
         return X_prev
 

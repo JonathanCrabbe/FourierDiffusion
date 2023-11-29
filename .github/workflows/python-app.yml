@@ -5,33 +5,38 @@ name: Python application
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install -e .[test]
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Check pre-commit hooks
-      run: |
-        pre-commit
-    - name: Test with pytest
-      run: |
-        pytest
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install -e .[test]
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Check black formatting
+        run: |
+          black --check .
+      - name: Check isoformat
+        run: |
+          isort --check .
+      - name: Check mypy
+        run: |
+          mypy --install-types .
+      - name: Test with pytest
+        run: |
+          pytest

@@ -29,13 +29,14 @@ def flatten_config(cfg: DictConfig | dict) -> dict[str, Any]:
         if isinstance(cfg, DictConfig)
         else cfg
     )
+    assert isinstance(cfg_dict, dict)
 
     cfg_flat: dict[str, Any] = {}
     for k, v in cfg_dict.items():
         # If the value is a dict, make a recursive call
         if isinstance(v, dict):
             if "_target_" in v:
-                cfg_flat[k] = v["_target_"]
+                cfg_flat[k] = v["_target_"]  # type: ignore
             cfg_flat.update(**flatten_config(v))
         # If the value is a list, make a recursive call for each element
         elif isinstance(v, list):
@@ -45,10 +46,10 @@ def flatten_config(cfg: DictConfig | dict) -> dict[str, Any]:
                     if "_target_" in v_i:
                         v_ls.append(v_i["_target_"])
                     cfg_flat.update(**flatten_config(v_i))
-            cfg_flat[k] = v_ls
+            cfg_flat[k] = v_ls  # type: ignore
         # Exclude uninformative keys
         elif k not in {"_target_", "_partial_"}:
-            cfg_flat[k] = v
+            cfg_flat[k] = v  # type: ignore
     return cfg_flat
 
 
