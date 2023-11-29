@@ -3,6 +3,7 @@ from pathlib import Path
 
 import hydra
 import torch
+import yaml
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
@@ -31,11 +32,11 @@ class SamplingRunner:
         self.model_id = cfg.model_id
 
         # Save sampling config to model directory
-        save_dir = self.model_path / self.model_id
-        OmegaConf.save(config=cfg, f=save_dir / "sample_config.yaml")
+        self.save_dir = self.model_path / self.model_id
+        OmegaConf.save(config=cfg, f=self.save_dir / "sample_config.yaml")
 
         # Read training config from model directory and instantiate the right datamodule
-        train_cfg = OmegaConf.load(save_dir / "train_config.yaml")
+        train_cfg = OmegaConf.load(self.save_dir / "train_config.yaml")
         self.datamodule: Datamodule = instantiate(train_cfg.datamodule)
         self.datamodule.prepare_data()
         self.datamodule.setup()
@@ -45,7 +46,7 @@ class SamplingRunner:
         self.num_diffusion_steps: int = cfg.num_diffusion_steps
 
         # Load score model from checkpoint
-        best_checkpoint_path = get_best_checkpoint(save_dir / "checkpoints")
+        best_checkpoint_path = get_best_checkpoint(self.save_dir / "checkpoints")
         self.score_model = ScoreModule.load_from_checkpoint(
             checkpoint_path=best_checkpoint_path
         )
@@ -63,15 +64,22 @@ class SamplingRunner:
         )
 
     def sample(self) -> None:
+        # Sample from the model
         X = self.sampler.sample(
             num_samples=self.num_samples, num_diffusion_steps=self.num_diffusion_steps
         )
+
+        # Compute metrics
         results = self.metrics(X)
         logging.info(f"Metrics:\n{dict_to_str(results)}")
-        logging.info(
-            f"Saving samples to {self.model_path / self.model_id / 'samples.pt'}"
+
+        # Save everything
+        logging.info(f"Saving samples ands metrics to {self.save_dir}.")
+        yaml.dump(
+            data=results,
+            stream=open(self.save_dir / "results.yaml", "w"),
         )
-        torch.save(X, self.model_path / self.model_id / "samples.pt")
+        torch.save(X, self.save_dir / "samples.pt")
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="sample")

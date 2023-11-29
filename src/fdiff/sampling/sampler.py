@@ -58,7 +58,7 @@ class DiffusionSampler:
         all_samples = []
 
         # Compute the required amount of batches
-        num_batches = num_samples // self.sample_batch_size
+        num_batches = max(1, num_samples // self.sample_batch_size)
 
         # No need to track gradients when sampling
         with torch.no_grad():
