@@ -8,3 +8,4 @@ defaults:
   - _self_
   - sampler: default
   - datamodule: ecg
+  - metrics: default

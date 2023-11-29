@@ -6,9 +6,11 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
+from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.sampler import DiffusionSampler
 from fdiff.utils.extraction import flatten_config, get_best_checkpoint
+from fdiff.utils.wasserstein import WassersteinDistances
 
 
 class SamplingRunner:
@@ -22,12 +24,18 @@ class SamplingRunner:
         logging.info(
             f"Welcome in the sampling script! You are using the following config:\n{flatten_config(cfg)}"
         )
+        self.random_seed: int = cfg.random_seed
 
-        # Model path and id
+        # Instantiate datamodule and random seed
+        self.datamodule: Datamodule = instantiate(cfg.datamodule)
+        self.datamodule.prepare_data()
+        self.datamodule.setup()
+
+        # Get model path and id
         self.model_path = Path(cfg.model_path)
         self.model_id = cfg.model_id
 
-        # Number of steps and samples
+        # Get number of steps and samples
         self.num_samples: int = cfg.num_samples
         self.num_diffusion_steps: int = cfg.num_diffusion_steps
 
@@ -45,9 +53,18 @@ class SamplingRunner:
         sampler_partial = instantiate(cfg.sampler)
         self.sampler: DiffusionSampler = sampler_partial(score_model=self.score_model)
 
+        # Instantiate metrics
+        metrics_partial = instantiate(cfg.metrics)
+        self.metrics = metrics_partial(original_samples=self.datamodule.X_train)
+
     def sample(self) -> None:
         X = self.sampler.sample(
             num_samples=self.num_samples, num_diffusion_steps=self.num_diffusion_steps
+        )
+        results = self.metrics(X)
+        logging.info(f"Metrics: {results}")
+        logging.info(
+            f"Saving samples to {self.model_path / self.model_id / 'samples.pt'}"
         )
         torch.save(X, self.model_path / self.model_id / "samples.pt")
 

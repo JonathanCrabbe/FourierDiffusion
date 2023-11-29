@@ -1,0 +1,10 @@
+_target_: fdiff.sampling.metrics.MetricCollection
+_partial_: true
+metrics:
+  - _target_: fdiff.sampling.metrics.SlicedWasserstein
+    _partial_: true
+    random_seed: ${random_seed}
+    num_directions: 10000
+  - _target_: fdiff.sampling.metrics.MarginalWasserstein
+    _partial_: true
+    random_seed: ${random_seed}
