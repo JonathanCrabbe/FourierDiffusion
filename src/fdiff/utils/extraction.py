@@ -11,6 +11,7 @@ from fdiff.dataloaders.datamodules import Datamodule
 def get_training_params(datamodule: Datamodule, trainer: pl.Trainer) -> dict[str, Any]:
     params = datamodule.dataset_parameters
     params["num_training_steps"] *= trainer.max_epochs
+    assert isinstance(params, dict)
     return params
 
 
@@ -64,10 +65,12 @@ def get_best_checkpoint(checkpoint_path: Path) -> Path:
     pattern = r"(.+?)epoch=(\d+)-val_loss=(\d+\.\d+).ckpt"
     best_loss = float("inf")
     for checkpoint in checkpoint_path.glob("*.ckpt"):
-        loss = float(re.match(pattern, str(checkpoint)).group(3))
-        if loss < best_loss:
-            best_loss = loss
-            best_checkpoint_path = checkpoint
+        match = re.match(pattern, str(checkpoint))
+        if match is not None:
+            loss = float(match.group(3))
+            if loss < best_loss:
+                best_loss = loss
+                best_checkpoint_path = checkpoint
     return best_checkpoint_path
 
 
@@ -85,6 +88,7 @@ def dict_to_str(dict: DictConfig | dict[str, Any]) -> str:
         dict = flatten_config(dict)
 
     dict_str = ""
+    max_len = max([len(k) for k in dict])
     for k, v in dict.items():
-        dict_str += f"\t {k: <30} : \t  {v} \t \n"
+        dict_str += f"\t {k: <{max_len + 5}} : \t  {v} \t \n"
     return dict_str
