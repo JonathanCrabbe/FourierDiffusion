@@ -8,6 +8,7 @@ from omegaconf import DictConfig
 
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
+from fdiff.sampling.metrics import MetricCollection
 from fdiff.sampling.sampler import DiffusionSampler
 from fdiff.utils.extraction import dict_to_str, get_best_checkpoint
 
@@ -41,7 +42,6 @@ class SamplingRunner:
         # Load score model from checkpoint
         chekcpoint_dir = self.model_path / self.model_id / "checkpoints"
         best_checkpoint_path = get_best_checkpoint(chekcpoint_dir)
-
         self.score_model = ScoreModule.load_from_checkpoint(
             checkpoint_path=best_checkpoint_path
         )
@@ -54,7 +54,9 @@ class SamplingRunner:
 
         # Instantiate metrics
         metrics_partial = instantiate(cfg.metrics)
-        self.metrics = metrics_partial(original_samples=self.datamodule.X_train)
+        self.metrics: MetricCollection = metrics_partial(
+            original_samples=self.datamodule.X_train
+        )
 
     def sample(self) -> None:
         X = self.sampler.sample(
