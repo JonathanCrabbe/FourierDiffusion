@@ -6,6 +6,7 @@ from typing import Optional
 
 import numpy as np
 import ot
+from tqdm import tqdm
 
 
 class WassersteinDistances:
@@ -166,7 +167,15 @@ class WassersteinDistances:
             np.ndarray: distribution of Wasserstein distances over all directions.
         """
         directions = self.get_random_directions(num_directions)
-        distances = [self.directional_distance(direction) for direction in directions]
+        distances = []
+        for direction in tqdm(
+            directions,
+            desc="Computing sliced Wasserstein",
+            unit="proj",
+            leave=False,
+            colour="blue",
+        ):
+            distances.append(self.directional_distance(direction))
         return np.array(distances)
 
     def marginal_distances(self) -> np.ndarray:
@@ -176,5 +185,13 @@ class WassersteinDistances:
             np.ndarray: distribution of Wasserstein distances over all features.
         """
         n_features = self.original_data.shape[1]
-        distances = [self.feature_distance(feature) for feature in range(n_features)]
+        distances = []
+        for feature in tqdm(
+            range(n_features),
+            desc="Computing marginal Wasserstein",
+            unit="feature",
+            leave=False,
+            colour="blue",
+        ):
+            distances.append(self.feature_distance(feature))
         return np.array(distances)
