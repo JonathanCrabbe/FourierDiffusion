@@ -9,7 +9,7 @@ from omegaconf import DictConfig
 
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
-from fdiff.utils.extraction import flatten_config, get_training_params
+from fdiff.utils.extraction import dict_to_str, get_training_params
 from fdiff.utils.wandb import maybe_initialize_wandb
 
 
@@ -22,7 +22,7 @@ class TrainingRunner:
 
         # Read out the config
         logging.info(
-            f"Welcome in the training script! You are using the following config:\n{flatten_config(cfg)}"
+            f"Welcome in the training script! You are using the following config:\n{dict_to_str(cfg)}"
         )
 
         # Maybe initialize wandb

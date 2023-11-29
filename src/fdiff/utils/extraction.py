@@ -69,3 +69,22 @@ def get_best_checkpoint(checkpoint_path: Path) -> Path:
             best_loss = loss
             best_checkpoint_path = checkpoint
     return best_checkpoint_path
+
+
+def dict_to_str(dict: DictConfig | dict[str, Any]) -> str:
+    """Convert a dict to a string with breaklines.
+
+    Args:
+        dict (DictConfig | dict[str, Any]): Dictionary to convert.
+
+    Returns:
+        str: String describing the dictionary's content line by line.
+    """
+
+    if isinstance(dict, DictConfig):
+        dict = flatten_config(dict)
+
+    dict_str = ""
+    for k, v in dict.items():
+        dict_str += f"\t {k: <30} : \t  {v} \t \n"
+    return dict_str

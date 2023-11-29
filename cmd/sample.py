@@ -9,22 +9,21 @@ from omegaconf import DictConfig
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.sampler import DiffusionSampler
-from fdiff.utils.extraction import flatten_config, get_best_checkpoint
-from fdiff.utils.wasserstein import WassersteinDistances
+from fdiff.utils.extraction import dict_to_str, get_best_checkpoint
 
 
 class SamplingRunner:
     def __init__(self, cfg: DictConfig) -> None:
         # Initialize torch
-        torch.manual_seed(cfg.random_seed)
+        self.random_seed: int = cfg.random_seed
+        torch.manual_seed(self.random_seed)
         if torch.cuda.is_available():
             torch.set_float32_matmul_precision("high")
 
         # Read out the config
         logging.info(
-            f"Welcome in the sampling script! You are using the following config:\n{flatten_config(cfg)}"
+            f"Welcome in the sampling script! You are using the following config:\n{dict_to_str(cfg)}"
         )
-        self.random_seed: int = cfg.random_seed
 
         # Instantiate datamodule and random seed
         self.datamodule: Datamodule = instantiate(cfg.datamodule)
@@ -62,7 +61,7 @@ class SamplingRunner:
             num_samples=self.num_samples, num_diffusion_steps=self.num_diffusion_steps
         )
         results = self.metrics(X)
-        logging.info(f"Metrics: {results}")
+        logging.info(f"Metrics:\n{dict_to_str(results)}")
         logging.info(
             f"Saving samples to {self.model_path / self.model_id / 'samples.pt'}"
         )
