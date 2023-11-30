@@ -15,7 +15,7 @@ test_data_wasserstein = [0.0, 0.1, 1.0]
 
 
 @pytest.mark.parametrize("shift", test_data_wasserstein)
-def test_sliced_waserstein(shift: float):
+def test_sliced_waserstein(shift: float) -> None:
     # Set random seed
     np.random.seed(random_seed)
 
@@ -28,6 +28,7 @@ def test_sliced_waserstein(shift: float):
         X_t=check_flat_array(dataset1),
         X_s=check_flat_array(dataset2),
         n_projections=num_directions,
+        seed=random_seed,
     )
 
     # Compute sliced wasserstein distance
@@ -43,7 +44,7 @@ def test_sliced_waserstein(shift: float):
 
 
 @pytest.mark.parametrize("shift", test_data_wasserstein)
-def test_marginal_waserstein(shift: float):
+def test_marginal_waserstein(shift: float) -> None:
     # Set random seed
     np.random.seed(random_seed)
 
