@@ -55,7 +55,7 @@ def idft(x: torch.Tensor) -> torch.Tensor:
     """
 
     max_len = x.size(1)
-    n_real = math.ceil(max_len / 2) + 1
+    n_real = math.ceil((max_len + 1) / 2)
 
     # Extract real and imaginary parts
     x_re = x[:, :n_real, :]
@@ -71,12 +71,12 @@ def idft(x: torch.Tensor) -> torch.Tensor:
 
     assert (
         x_im.size() == x_re.size()
-    ), "The real and imaginary parts should have the same shape"
+    ), f"The real and imaginary parts should have the same shape, got {x_re.size()} and {x_im.size()} instead."
 
     x_freq = torch.complex(x_re, x_im)
 
     # Apply IFFT
-    x_time = irfft(x_freq, dim=1, norm="ortho")
+    x_time = irfft(x_freq, n=max_len, dim=1, norm="ortho")
 
     assert isinstance(x_time, torch.Tensor)
     assert (

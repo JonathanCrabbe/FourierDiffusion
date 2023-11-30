@@ -35,13 +35,17 @@ def test_flatten_config() -> None:
 
 def test_dft() -> None:
     # Create a random real time series
-    x = torch.randn(batch_size, max_len, n_channels)
+    x_even = torch.randn(batch_size, max_len, n_channels)
+    x_odd = torch.randn(batch_size, max_len + 1, n_channels)
 
     # Compute the DFT
-    x_tilde = dft(x)
+    x_even_tilde = dft(x_even)
+    x_odd_tilde = dft(x_odd)
 
     # Compute the inverse DFT
-    x_hat = idft(x_tilde)
+    x_even_hat = idft(x_even_tilde)
+    x_odd_hat = idft(x_odd_tilde)
 
     # Check that the inverse DFT is the original time series
-    assert torch.allclose(x, x_hat, atol=1e-5)
+    assert torch.allclose(x_even, x_even_hat, atol=1e-5)
+    assert torch.allclose(x_odd, x_odd_hat, atol=1e-5)
