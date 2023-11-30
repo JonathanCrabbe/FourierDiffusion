@@ -22,7 +22,8 @@ repos:
     rev: v0.991
     hooks:
       - id: mypy
-        args: [
+        args:
+          [
             "--ignore-missing-imports",
             "--scripts-are-modules",
             "--disallow-incomplete-defs",
@@ -35,5 +36,5 @@ repos:
             "--disallow-untyped-calls",
             "--install-types",
             "--non-interactive",
-            "--follow-imports=skip", # This is temporary until the mbi directory is not excluded
+            "--follow-imports=skip",
           ]

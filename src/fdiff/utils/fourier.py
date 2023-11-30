@@ -78,4 +78,9 @@ def idft(x: torch.Tensor) -> torch.Tensor:
     # Apply IFFT
     x_time = irfft(x_freq, dim=1, norm="ortho")
 
+    assert isinstance(x_time, torch.Tensor)
+    assert (
+        x_time.size() == x.size()
+    ), f"The inverse DFT and the input should have the same size. Got {x_time.size()} and {x.size()} instead."
+
     return x_time
