@@ -64,7 +64,7 @@ class SamplingRunner:
         )
 
     def sample(self) -> None:
-        # Sample from the model
+        # Sample from score model
         X = self.sampler.sample(
             num_samples=self.num_samples, num_diffusion_steps=self.num_diffusion_steps
         )
