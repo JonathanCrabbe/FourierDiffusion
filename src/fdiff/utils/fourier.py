@@ -41,7 +41,7 @@ def dft(x: torch.Tensor) -> torch.Tensor:
         x_tilde.size() == x.size()
     ), f"The DFT and the input should have the same size. Got {x_tilde.size()} and {x.size()} instead."
 
-    return x_tilde
+    return x_tilde.detach()
 
 
 def idft(x: torch.Tensor) -> torch.Tensor:
@@ -83,4 +83,4 @@ def idft(x: torch.Tensor) -> torch.Tensor:
         x_time.size() == x.size()
     ), f"The inverse DFT and the input should have the same size. Got {x_time.size()} and {x.size()} instead."
 
-    return x_time
+    return x_time.detach()

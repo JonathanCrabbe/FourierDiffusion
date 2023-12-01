@@ -12,6 +12,7 @@ from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.metrics import MetricCollection
 from fdiff.sampling.sampler import DiffusionSampler
 from fdiff.utils.extraction import dict_to_str, get_best_checkpoint
+from fdiff.utils.fourier import idft
 
 
 class SamplingRunner:
@@ -38,6 +39,7 @@ class SamplingRunner:
         # Read training config from model directory and instantiate the right datamodule
         train_cfg = OmegaConf.load(self.save_dir / "train_config.yaml")
         self.datamodule: Datamodule = instantiate(train_cfg.datamodule)
+        self.fourier_transform: bool = self.datamodule.fourier_transform
         self.datamodule.prepare_data()
         self.datamodule.setup()
 
@@ -68,6 +70,10 @@ class SamplingRunner:
         X = self.sampler.sample(
             num_samples=self.num_samples, num_diffusion_steps=self.num_diffusion_steps
         )
+
+        # If sampling in frequency domain, bring back the sample to time domain
+        if self.fourier_transform:
+            X = idft(X)
 
         # Compute metrics
         results = self.metrics(X)
