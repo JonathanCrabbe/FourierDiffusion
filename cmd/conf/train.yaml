@@ -1,4 +1,5 @@
 random_seed: 42
+fourier_transform: false
 defaults:
   - _self_
   - score_model: default
