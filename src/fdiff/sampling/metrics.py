@@ -5,6 +5,7 @@ from typing import Optional
 import numpy as np
 import torch
 
+from fdiff.utils.fourier import dft
 from fdiff.utils.tensors import check_flat_array
 from fdiff.utils.wasserstein import WassersteinDistances
 
@@ -33,20 +34,35 @@ class MetricCollection:
         original_samples: Optional[np.ndarray | torch.Tensor] = None,
         include_baselines: bool = True,
     ) -> None:
-        for i, metric in enumerate(metrics):
+        metrics_time: list[Metric] = []
+        metrics_freq: list[Metric] = []
+
+        original_samples_freq = (
+            dft(original_samples) if original_samples is not None else None
+        )
+
+        for metric in metrics:
             # If metric is partially instantiated, instantiate it with original samples
             if isinstance(metric, partial):
                 assert (
                     original_samples is not None
                 ), f"Original samples must be provided for metric {metric.name} to be instantiated."
-                metrics[i] = metric(original_samples=original_samples)  # type: ignore
-        self.metrics = metrics
+                metrics_time.append(metric(original_samples=original_samples))  # type: ignore
+                metrics_freq.append(metric(original_samples=original_samples_freq))  # type: ignore
+        self.metrics_time = metrics_time
+        self.metrics_freq = metrics_freq
         self.include_baselines = include_baselines
 
     def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, float]:
         metric_dict = {}
-        for metric in self.metrics:
-            metric_dict.update(metric(other_samples))
+        other_samples_freq = dft(other_samples)
+        for metric_time, metric_freq in zip(self.metrics_time, self.metrics_freq):
+            metric_dict.update(
+                {f"time_{k}": v for k, v in metric_time(other_samples).items()}
+            )
+            metric_dict.update(
+                {f"freq_{k}": v for k, v in metric_freq(other_samples_freq).items()}
+            )
         if self.include_baselines:
             metric_dict.update(self.baseline_metrics)
         return dict(sorted(metric_dict.items(), key=lambda item: item[0]))
@@ -54,8 +70,13 @@ class MetricCollection:
     @property
     def baseline_metrics(self) -> dict[str, float]:
         metric_dict = {}
-        for metric in self.metrics:
-            metric_dict.update(metric.baseline_metrics)
+        for metric_time, metric_freq in zip(self.metrics_time, self.metrics_freq):
+            metric_dict.update(
+                {f"time_{k}": v for k, v in metric_time.baseline_metrics.items()}
+            )
+            metric_dict.update(
+                {f"freq_{k}": v for k, v in metric_freq.baseline_metrics.items()}
+            )
         return metric_dict
 
 

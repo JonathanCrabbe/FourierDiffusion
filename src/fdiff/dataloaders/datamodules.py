@@ -10,18 +10,26 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from fdiff.utils.dataclasses import collate_batch
+from fdiff.utils.fourier import dft
 
 
 class DiffusionDataset(Dataset):
-    def __init__(self, X: torch.Tensor, y: Optional[torch.Tensor] = None):
+    def __init__(
+        self,
+        X: torch.Tensor,
+        y: Optional[torch.Tensor] = None,
+        fourier_transform: bool = False,
+    ) -> None:
         super().__init__()
+        if fourier_transform:
+            X = dft(X).detach()
         self.X = X
         self.y = y
 
     def __len__(self) -> int:
         return len(self.X)
 
-    def __getitem__(self, index) -> dict[str, torch.Tensor]:
+    def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
         data = {}
         data["X"] = self.X[index]
         if self.y is not None:
@@ -35,6 +43,7 @@ class Datamodule(pl.LightningDataModule, ABC):
         data_dir: Path | str = Path.cwd() / "data",
         random_seed: int = 42,
         batch_size: int = 32,
+        fourier_transform: bool = False,
     ) -> None:
         super().__init__()
         # Cast data_dir to Path type
@@ -43,6 +52,7 @@ class Datamodule(pl.LightningDataModule, ABC):
         self.data_dir = data_dir / self.dataset_name
         self.random_seed = random_seed
         self.batch_size = batch_size
+        self.fourier_transform = fourier_transform
         self.X_train = torch.Tensor()
         self.y_train: Optional[torch.Tensor] = None
         self.X_test = torch.Tensor()
@@ -61,7 +71,9 @@ class Datamodule(pl.LightningDataModule, ABC):
         ...
 
     def train_dataloader(self) -> DataLoader:
-        train_set = DiffusionDataset(X=self.X_train, y=self.y_train)
+        train_set = DiffusionDataset(
+            X=self.X_train, y=self.y_train, fourier_transform=self.fourier_transform
+        )
         return DataLoader(
             train_set,
             batch_size=self.batch_size,
@@ -70,7 +82,9 @@ class Datamodule(pl.LightningDataModule, ABC):
         )
 
     def test_dataloader(self) -> DataLoader:
-        test_set = DiffusionDataset(X=self.X_test, y=self.y_test)
+        test_set = DiffusionDataset(
+            X=self.X_test, y=self.y_test, fourier_transform=self.fourier_transform
+        )
         return DataLoader(
             test_set,
             batch_size=self.batch_size,
@@ -79,7 +93,9 @@ class Datamodule(pl.LightningDataModule, ABC):
         )
 
     def val_dataloader(self) -> DataLoader:
-        test_set = DiffusionDataset(X=self.X_test, y=self.y_test)
+        test_set = DiffusionDataset(
+            X=self.X_test, y=self.y_test, fourier_transform=self.fourier_transform
+        )
         return DataLoader(
             test_set,
             batch_size=self.batch_size,
@@ -106,9 +122,13 @@ class ECGDatamodule(Datamodule):
         data_dir: Path | str = Path.cwd() / "data",
         random_seed: int = 42,
         batch_size: int = 32,
+        fourier_transform: bool = False,
     ) -> None:
         super().__init__(
-            data_dir=data_dir, random_seed=random_seed, batch_size=batch_size
+            data_dir=data_dir,
+            random_seed=random_seed,
+            batch_size=batch_size,
+            fourier_transform=fourier_transform,
         )
 
     def setup(self, stage: str = "fit") -> None:

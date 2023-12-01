@@ -1,4 +1,5 @@
 _target_: fdiff.dataloaders.datamodules.ECGDatamodule
 data_dir: ${hydra:runtime.cwd}/data
 random_seed: ${random_seed}
+fourier_transform: ${fourier_transform}
 batch_size: 64
