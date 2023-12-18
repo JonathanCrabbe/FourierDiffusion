@@ -39,9 +39,7 @@ def test_noise_adder():
     x = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
     noise = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
     timesteps = torch.rand(size=(batch_size,), device="cpu")
-    x_noisy = scheduler.add_noise(
-        original_samples=x, noise=noise, timesteps=timesteps
-    )
+    x_noisy = scheduler.add_noise(original_samples=x, noise=noise, timesteps=timesteps)
 
     assert x_noisy.shape == x.shape
 
@@ -52,13 +50,9 @@ def test_noise_adder():
 
     scheduler.set_timesteps(num_diffusion_steps=1000)
 
-    model_output = torch.randn(
-        size=(batch_size, max_len, n_channels), device="cpu"
-    )
+    model_output = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
     timesteps = torch.ones(size=(batch_size,), device="cpu") * 0.5
-    scheduler_output = scheduler.step(
-        model_output, timestep=timesteps, sample=x_noisy
-    )
+    scheduler_output = scheduler.step(model_output, timestep=timesteps, sample=x_noisy)
     assert scheduler_output.prev_sample.shape == x_noisy.shape
 
 
@@ -114,9 +108,7 @@ def test_score_module_with_vpsde():
         ), f"Parameter {param_name} did not change during training"
 
     # Create a sampler
-    sampler = DiffusionSampler(
-        score_model=score_model, sample_batch_size=batch_size
-    )
+    sampler = DiffusionSampler(score_model=score_model, sample_batch_size=batch_size)
 
     # Sample from the sampler
     samples = sampler.sample(
