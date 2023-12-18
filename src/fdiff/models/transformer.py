@@ -68,7 +68,6 @@ class GaussianFourierProjection(nn.Module):
             torch.randn((d_model + 1) // 2) * scale, requires_grad=False
         )
         self.dense = nn.Linear(d_model, d_model)
-        print(self.d_model)
 
     def forward(self, x: torch.Tensor, timesteps: torch.Tensor) -> torch.Tensor:
         time_proj = timesteps[:, None] * self.W[None, :] * 2 * np.pi
@@ -78,4 +77,6 @@ class GaussianFourierProjection(nn.Module):
 
         t_emb = t_emb.unsqueeze(1)
 
-        return x + self.dense(t_emb)
+        projected_emb: torch.Tensor = self.dense(t_emb)
+
+        return x + projected_emb

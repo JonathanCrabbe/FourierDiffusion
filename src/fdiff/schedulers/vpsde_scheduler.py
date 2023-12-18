@@ -71,9 +71,7 @@ class VPScheduler(SDE):
         sample = mean + noise
         return sample
 
-    def get_beta(
-        self, timestep: torch.Tensor | float | np.ndarray
-    ) -> torch.Tensor | float | np.ndarray:
+    def get_beta(self, timestep: torch.Tensor | float | np.ndarray) -> torch.Tensor:
         return torch.tensor(
             self.beta_0 + timestep * (self.beta_1 - self.beta_0), device=self.device
         )
