@@ -3,6 +3,7 @@ model_id: ub0lv98f
 num_samples: 1000
 num_diffusion_steps: 1000
 random_seed: 42
+clip_sample: False
 
 defaults:
   - _self_

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod, abstractproperty
 from functools import partial
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import torch
-
 from fdiff.utils.fourier import dft
 from fdiff.utils.tensors import check_flat_array
 from fdiff.utils.wasserstein import WassersteinDistances
@@ -156,6 +156,16 @@ class MarginalWasserstein(Metric):
             "marginal_wasserstein_mean": float(np.mean(distances)),
             "marginal_wasserstein_max": float(np.max(distances)),
         }
+
+    def save(self, other_samples: np.ndarray | torch.Tensor, path: str | Path) -> None:
+        # Save the distances array for post-processing
+        wd = WassersteinDistances(
+            original_data=self.original_samples,
+            other_data=check_flat_array(other_samples),
+            seed=self.random_seed,
+        )
+        distances = wd.marginal_distances()
+        np.save(path, distances)
 
     @property
     def baseline_metrics(self) -> dict[str, float]:

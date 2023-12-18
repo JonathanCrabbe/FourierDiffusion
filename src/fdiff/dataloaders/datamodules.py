@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader, Dataset
 from fdiff.utils.dataclasses import collate_batch
 from fdiff.utils.fourier import dft
 
+import numpy as np
+
 
 class DiffusionDataset(Dataset):
     def __init__(
@@ -19,12 +21,20 @@ class DiffusionDataset(Dataset):
         X: torch.Tensor,
         y: Optional[torch.Tensor] = None,
         fourier_transform: bool = False,
+        standardize: bool = False,
+        X_ref: Optional[torch.Tensor] = None,
     ) -> None:
         super().__init__()
         if fourier_transform:
             X = dft(X).detach()
         self.X = X
         self.y = y
+        self.standardize = standardize
+        self.feature_mean = None
+        self.feature_std = None
+        if X_ref is None:
+            X_ref = X
+        self.compute_feature_statistics(X_ref)
 
     def __len__(self) -> int:
         return len(self.X)
@@ -32,9 +42,16 @@ class DiffusionDataset(Dataset):
     def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
         data = {}
         data["X"] = self.X[index]
+        if self.standardize:
+            data["X"] = (data["X"] - self.feature_mean) / self.feature_std
         if self.y is not None:
             data["y"] = self.y[index]
         return data
+
+    def compute_feature_statistics(self, X_ref: torch.Tensor) -> None:
+        """Compute the mean and standard deviation of the features."""
+        self.feature_mean = X_ref.mean(dim=0)
+        self.feature_std = X_ref.std(dim=0)
 
 
 class Datamodule(pl.LightningDataModule, ABC):
@@ -44,6 +61,7 @@ class Datamodule(pl.LightningDataModule, ABC):
         random_seed: int = 42,
         batch_size: int = 32,
         fourier_transform: bool = False,
+        standardize: bool = False,
     ) -> None:
         super().__init__()
         # Cast data_dir to Path type
@@ -53,10 +71,13 @@ class Datamodule(pl.LightningDataModule, ABC):
         self.random_seed = random_seed
         self.batch_size = batch_size
         self.fourier_transform = fourier_transform
+        self.standardize = standardize
         self.X_train = torch.Tensor()
         self.y_train: Optional[torch.Tensor] = None
         self.X_test = torch.Tensor()
         self.y_test: Optional[torch.Tensor] = None
+        self.feature_mean: Optional[torch.Tensor] = None
+        self.feature_std: Optional[torch.Tensor] = None
 
     def prepare_data(self) -> None:
         if not self.data_dir.exists():
@@ -72,7 +93,10 @@ class Datamodule(pl.LightningDataModule, ABC):
 
     def train_dataloader(self) -> DataLoader:
         train_set = DiffusionDataset(
-            X=self.X_train, y=self.y_train, fourier_transform=self.fourier_transform
+            X=self.X_train,
+            y=self.y_train,
+            fourier_transform=self.fourier_transform,
+            standardize=self.standardize,
         )
         return DataLoader(
             train_set,
@@ -94,7 +118,11 @@ class Datamodule(pl.LightningDataModule, ABC):
 
     def val_dataloader(self) -> DataLoader:
         test_set = DiffusionDataset(
-            X=self.X_test, y=self.y_test, fourier_transform=self.fourier_transform
+            X=self.X_test,
+            y=self.y_test,
+            fourier_transform=self.fourier_transform,
+            standardize=self.standardize,
+            X_ref=self.X_train,
         )
         return DataLoader(
             test_set,
@@ -123,12 +151,14 @@ class ECGDatamodule(Datamodule):
         random_seed: int = 42,
         batch_size: int = 32,
         fourier_transform: bool = False,
+        standardize: bool = False,
     ) -> None:
         super().__init__(
             data_dir=data_dir,
             random_seed=random_seed,
             batch_size=batch_size,
             fourier_transform=fourier_transform,
+            standardize=standardize,
         )
 
     def setup(self, stage: str = "fit") -> None:
@@ -161,3 +191,66 @@ class ECGDatamodule(Datamodule):
     @property
     def dataset_name(self) -> str:
         return "ecg"
+
+
+class SyntheticDatamodule(Datamodule):
+    def __init__(
+        self,
+        data_dir: Path | str = Path.cwd() / "data",
+        random_seed: int = 42,
+        batch_size: int = 32,
+        fourier_transform: bool = False,
+        standardize: bool = False,
+        max_len: int = 100,
+        num_samples: int = 1000,
+    ) -> None:
+        super().__init__(
+            data_dir=data_dir,
+            random_seed=random_seed,
+            batch_size=batch_size,
+            fourier_transform=fourier_transform,
+            standardize=standardize,
+        )
+        self.max_len = max_len
+        self.num_samples = num_samples
+
+    def setup(self, stage: str = "fit") -> None:
+        # Read CSV; extract features and labels
+        path_train = self.data_dir / "train.csv"
+        path_test = self.data_dir / "test.csv"
+
+        # Read data
+        df_train = pd.read_csv(path_train, header=None)
+        X_train = df_train.values
+
+        df_test = pd.read_csv(path_test, header=None)
+        X_test = df_test.values
+
+        # Convert to tensor
+        self.X_train = torch.tensor(X_train, dtype=torch.float32).unsqueeze(
+            2
+        )  # Add a channel dimension
+        self.y_train = None
+        self.X_test = torch.tensor(X_test, dtype=torch.float32).unsqueeze(2)
+        self.y_test = None
+
+    def download_data(self) -> None:
+        # Generate data, same DGP as in Fourier flows
+
+        n_generated = 2 * self.num_samples  # For train + test
+        phase = np.random.normal(size=(n_generated)).reshape(-1, 1)
+        frequency = np.random.beta(a=2, b=2, size=(n_generated)).reshape(-1, 1)
+        timesteps = np.arange(self.max_len)
+        X = np.sin(timesteps * frequency + phase)
+        X_train = X[: self.num_samples]
+        X_test = X[self.num_samples :]
+
+        # Save data
+        df_train = pd.DataFrame(X_train)
+        df_test = pd.DataFrame(X_test)
+        df_train.to_csv(self.data_dir / "train.csv", index=False, header=False)
+        df_test.to_csv(self.data_dir / "test.csv", index=False, header=False)
+
+    @property
+    def dataset_name(self) -> str:
+        return "synthetic"

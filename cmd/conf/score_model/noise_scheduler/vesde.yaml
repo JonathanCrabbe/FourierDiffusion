@@ -1,0 +1,5 @@
+_target_: fdiff.schedulers.vesde_scheduler.VEScheduler
+eps: 1e-5
+sigma_min: 0.01 
+sigma_max: 2
+fourier_noise_scaling: ${fourier_noise_scaling}

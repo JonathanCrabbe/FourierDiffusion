@@ -1,5 +1,9 @@
 random_seed: 42
-fourier_transform: false
+fourier_transform: True
+fourier_noise_scaling: False
+likelihood_weighting: False 
+standardize: True
+
 defaults:
   - _self_
   - score_model: default

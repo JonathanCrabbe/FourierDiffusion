@@ -4,6 +4,10 @@ d_model: 72
 num_layers: 10
 n_head: 12
 lr_max: 1.0e-3
+fourier_noise_scaling: ${fourier_noise_scaling}
+likelihood_weighting: ${likelihood_weighting}
+
 
 defaults:
-  - noise_scheduler: ddpm
+  - noise_scheduler: vpsde
+  
