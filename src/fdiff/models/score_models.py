@@ -135,8 +135,9 @@ class ScoreModule(pl.LightningModule):
 
     def set_loss_fn(self) -> tuple[Callable, Callable]:
         # depending on the scheduler, get the right loss function
-        scheduler_config = self.noise_scheduler.config  # type: ignore
+
         if isinstance(self.noise_scheduler, DDPMScheduler):
+            scheduler_config = self.noise_scheduler.config  # type: ignore
             self.max_time = scheduler_config.num_train_timesteps
 
             training_loss_fn = get_ddpm_loss(
