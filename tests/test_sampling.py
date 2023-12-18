@@ -30,3 +30,7 @@ def test_sampler():
 
     # Check the shape of the samples
     assert samples.shape == (num_samples, max_len, n_channels)
+
+
+if __name__ == "__main__":
+    test_sampler()

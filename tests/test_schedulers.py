@@ -1,6 +1,3 @@
-from fdiff.schedulers.vpsde_scheduler import VPScheduler
-import torch
-import numpy as np
 from copy import deepcopy
 from pathlib import Path
 
@@ -8,9 +5,9 @@ import pytorch_lightning as pl
 import torch
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
+from fdiff.sampling.sampler import DiffusionSampler
 from fdiff.schedulers.vpsde_scheduler import VPScheduler
 from fdiff.utils.dataclasses import DiffusableBatch
-from fdiff.sampling.sampler import DiffusionSampler
 
 n_head = 4
 d_model = 8
@@ -39,10 +36,12 @@ def test_noise_adder():
     scheduler = VPScheduler(beta_min=beta_min, beta_max=beta_max)
 
     # Create a dummy time series
-    x = torch.randn(size=(batch_size, max_len, n_channels), device="cuda")
-    noise = torch.randn(size=(batch_size, max_len, n_channels), device="cuda")
-    timesteps = torch.rand(size=(batch_size,), device="cuda")
-    x_noisy = scheduler.add_noise(original_samples=x, noise=noise, timesteps=timesteps)
+    x = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
+    noise = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
+    timesteps = torch.rand(size=(batch_size,), device="cpu")
+    x_noisy = scheduler.add_noise(
+        original_samples=x, noise=noise, timesteps=timesteps
+    )
 
     assert x_noisy.shape == x.shape
 
@@ -53,9 +52,13 @@ def test_noise_adder():
 
     scheduler.set_timesteps(num_diffusion_steps=1000)
 
-    model_output = torch.randn(size=(batch_size, max_len, n_channels), device="cuda")
-    timesteps = torch.ones(size=(batch_size,), device="cuda") * 0.5
-    scheduler_output = scheduler.step(model_output, timestep=timesteps, sample=x_noisy)
+    model_output = torch.randn(
+        size=(batch_size, max_len, n_channels), device="cpu"
+    )
+    timesteps = torch.ones(size=(batch_size,), device="cpu") * 0.5
+    scheduler_output = scheduler.step(
+        model_output, timestep=timesteps, sample=x_noisy
+    )
     assert scheduler_output.prev_sample.shape == x_noisy.shape
 
 
@@ -111,7 +114,9 @@ def test_score_module_with_vpsde():
         ), f"Parameter {param_name} did not change during training"
 
     # Create a sampler
-    sampler = DiffusionSampler(score_model=score_model, sample_batch_size=batch_size)
+    sampler = DiffusionSampler(
+        score_model=score_model, sample_batch_size=batch_size
+    )
 
     # Sample from the sampler
     samples = sampler.sample(
@@ -146,7 +151,8 @@ class DummyDatamodule(Datamodule):
     def setup(self, stage: str = "fit") -> None:
         torch.manual_seed(self.random_seed)
         self.X_train = torch.randn(
-            (10 * self.batch_size, self.max_len, self.n_channels), dtype=torch.float32
+            (10 * self.batch_size, self.max_len, self.n_channels),
+            dtype=torch.float32,
         )
         self.y_train = torch.randint(
             low=low, high=high, size=(10 * self.batch_size,), dtype=torch.long
@@ -159,7 +165,8 @@ class DummyDatamodule(Datamodule):
         ...
 
     def compute_feature_statistics(self) -> None:
-        """Compute the mean and standard deviation of the features, along the batch dimension."""
+        """Compute the mean and standard deviation
+        of the features, along the batch dimension."""
         self.feature_mean = self.X_train.mean(dim=0)
         self.feature_std = self.X_train.std(dim=0)
 
