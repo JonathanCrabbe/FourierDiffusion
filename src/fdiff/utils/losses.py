@@ -33,7 +33,7 @@ def get_sde_loss_fn(
         else lambda *args, **kwargs: 0.5 * torch.sum(*args, **kwargs)
     )
 
-    def loss_fn(model, batch):
+    def loss_fn(model, batch) -> torch.Tensor:
         """Compute the loss function.
 
         Args:
@@ -118,7 +118,7 @@ def get_sde_loss_fn(
 
 
 def get_ddpm_loss(scheduler, train, max_time):
-    def loss_fn(model, batch):
+    def loss_fn(model, batch) -> torch.Tensor:
         if train:
             model.train()
         else:

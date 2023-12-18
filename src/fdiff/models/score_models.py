@@ -99,7 +99,7 @@ class ScoreModule(pl.LightningModule):
 
     def training_step(
         self, batch: DiffusableBatch, batch_idx: int, dataloader_idx: int = 0
-    ) -> torch.Tensor:
+    ):
         loss = self.training_loss_fn(self, batch)
 
         self.log_dict(
@@ -135,8 +135,9 @@ class ScoreModule(pl.LightningModule):
 
     def set_loss_fn(self) -> tuple[Callable, Callable]:
         # depending on the scheduler, get the right loss function
+        scheduler_config = self.noise_scheduler.config  # type: ignore
         if isinstance(self.noise_scheduler, DDPMScheduler):
-            self.max_time = self.noise_scheduler.config.num_train_timesteps
+            self.max_time = scheduler_config.num_train_timesteps
 
             training_loss_fn = get_ddpm_loss(
                 scheduler=self.noise_scheduler, train=True, max_time=self.max_time
@@ -167,7 +168,7 @@ class ScoreModule(pl.LightningModule):
                 "Scheduler not implemented yet, cannot set loss function"
             )
 
-    def set_time_encoder(self) -> nn.Module:
+    def set_time_encoder(self):
         if isinstance(self.noise_scheduler, DDPMScheduler):
             return TimeEncoding(d_model=self.d_model, max_time=self.max_time)
 

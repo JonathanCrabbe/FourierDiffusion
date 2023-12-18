@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 # Copyright 2023 UC Berkeley Team and The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

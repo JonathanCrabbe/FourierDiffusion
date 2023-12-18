@@ -30,8 +30,8 @@ class DiffusionDataset(Dataset):
         self.X = X
         self.y = y
         self.standardize = standardize
-        self.feature_mean = None
-        self.feature_std = None
+        self.feature_mean = torch.empty(size=(self.X.size(1), self.X.size(2)))
+        self.feature_std = torch.empty(size=(self.X.size(1), self.X.size(2)))
         if X_ref is None:
             X_ref = X
         self.compute_feature_statistics(X_ref)
