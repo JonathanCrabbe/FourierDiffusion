@@ -1,4 +1,3 @@
 _target_: fdiff.sampling.sampler.DiffusionSampler
 _partial_: true
 sample_batch_size: 200
-clip_sample: ${clip_sample}

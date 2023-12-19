@@ -1,8 +1,10 @@
-from fdiff.schedulers.sde import SDE
-import torch
-import numpy as np
-from collections import namedtuple
 import math
+from collections import namedtuple
+
+import numpy as np
+import torch
+
+from fdiff.schedulers.sde import SDE
 
 SamplingOutput = namedtuple("SamplingOutput", ["prev_sample"])
 
@@ -12,7 +14,7 @@ class VEScheduler(SDE):
         self,
         sigma_min: float = 0.01,
         sigma_max: float = 50.0,
-        fourier_noise_scaling=False,
+        fourier_noise_scaling: bool = False,
         eps: float = 1e-5,
     ):
         """Construct a Variance Exploding SDE.
@@ -30,8 +32,8 @@ class VEScheduler(SDE):
         self.G = None
 
     @property
-    def T(self):
-        return 1
+    def T(self) -> float:
+        return 1.0
 
     def marginal_prob(
         self, x: torch.Tensor, t: torch.Tensor
@@ -52,7 +54,7 @@ class VEScheduler(SDE):
         original_samples: torch.Tensor,
         noise: torch.Tensor,
         timesteps: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         x0 = original_samples
         mean, _ = self.marginal_prob(x0, timesteps)
 
@@ -74,7 +76,7 @@ class VEScheduler(SDE):
         )
         self.step_size = self.timesteps[0] - self.timesteps[1]
 
-    def prior_sampling(self, shape):
+    def prior_sampling(self, shape: tuple[int, ...]) -> torch.Tensor:
         # Reshape the G matrix to be (1, max_len, max_len)
         scaling_matrix = self.G_matrix.view(
             -1, self.G_matrix.shape[0], self.G_matrix.shape[1]
@@ -110,7 +112,7 @@ class VEScheduler(SDE):
         # Compute drift for the reverse
         drift = -(
             torch.matmul(diffusion * diffusion, model_output)
-        )  # Notive that the drift of the forward is 0
+        )  # Notice that the drift of the forward is 0
 
         # Sample noise
         z = torch.randn_like(sample)

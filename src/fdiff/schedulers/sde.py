@@ -1,15 +1,15 @@
 """Abstract SDE classes, Reverse SDE, and VE/VP SDEs. Adapted from https://github.com/yang-song/score_sde."""
 import abc
-import torch
-import numpy as np
-from torch import device
 import math
+
+import torch
+from torch import device
 
 
 class SDE(abc.ABC):
     """SDE abstract class. Functions are designed for a mini-batch of inputs."""
 
-    def __init__(self, fourier_noise_scaling=False):
+    def __init__(self, fourier_noise_scaling: bool = False):
         """Construct an SDE.
         Args:
           N: number of discretization time steps.
@@ -19,19 +19,18 @@ class SDE(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def T(self):
+    def T(self) -> float:
         """End time of the SDE."""
-        pass
 
     @abc.abstractmethod
-    def marginal_prob(self, x, t):
+    def marginal_prob(
+        self, x: torch.Tensor, t: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Parameters to determine the marginal distribution of the SDE, $p_t(x)$."""
-        pass
 
     @abc.abstractmethod
-    def prior_sampling(self, shape):
+    def prior_sampling(self, shape: tuple[int, ...]) -> torch.Tensor:
         """Generate one sample from the prior distribution, $p_T(x)$."""
-        pass
 
     def initialize(self, max_len: int, device: str | device) -> None:
         """Finish the initialization of the scheduler by setting G (scaling diagonal) and the device.

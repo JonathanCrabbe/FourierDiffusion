@@ -1,16 +1,15 @@
+import math
 from typing import Optional
 
 import torch
+from diffusers import DDPMScheduler
 from tqdm import tqdm
 
 from fdiff.models.score_models import ScoreModule
-from fdiff.utils.dataclasses import DiffusableBatch
-from fdiff.schedulers.vpsde_scheduler import VPScheduler
-from fdiff.schedulers.vesde_scheduler import VEScheduler
 from fdiff.schedulers.custom_ddpm_scheduler import CustomDDPMScheduler
-from diffusers import DDPMScheduler
-from collections import namedtuple
-import math
+from fdiff.schedulers.vesde_scheduler import VEScheduler
+from fdiff.schedulers.vpsde_scheduler import VPScheduler
+from fdiff.utils.dataclasses import DiffusableBatch
 
 
 class DiffusionSampler:
@@ -18,15 +17,13 @@ class DiffusionSampler:
         self,
         score_model: ScoreModule,
         sample_batch_size: int,
-        clip_sample: bool = False,
     ) -> None:
         self.score_model = score_model
         self.noise_scheduler = score_model.noise_scheduler
 
-        if hasattr(self.noise_scheduler, "config"):
-            self.noise_scheduler.config.clip_sample = clip_sample
-        else:
-            self.noise_scheduler.clip_sample = clip_sample
+        # Disable clipping for the noise scheduler
+        if isinstance(self.noise_scheduler, (DDPMScheduler, CustomDDPMScheduler)):
+            self.noise_scheduler.config.clip_sample = False
 
         self.sample_batch_size = sample_batch_size
         self.n_channels = score_model.n_channels
@@ -119,7 +116,7 @@ class DiffusionSampler:
 
         return torch.cat(all_samples, dim=0)
 
-    def sample_prior(self, batch_size):
+    def sample_prior(self, batch_size: int) -> torch.Tensor:
         # depending on the scheduler, the prior distribution might be different
         if isinstance(self.noise_scheduler, DDPMScheduler):
             X = torch.randn(
