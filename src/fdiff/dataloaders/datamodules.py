@@ -78,8 +78,6 @@ class Datamodule(pl.LightningDataModule, ABC):
         self.y_train: Optional[torch.Tensor] = None
         self.X_test = torch.Tensor()
         self.y_test: Optional[torch.Tensor] = None
-        self.feature_mean: Optional[torch.Tensor] = None
-        self.feature_std: Optional[torch.Tensor] = None
 
     def prepare_data(self) -> None:
         if not self.data_dir.exists():
