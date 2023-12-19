@@ -38,13 +38,13 @@ def test_dft() -> None:
     x_even = torch.randn(batch_size, max_len, n_channels)
     x_odd = torch.randn(batch_size, max_len + 1, n_channels)
 
-    # # Check that IDFT o DFT is identity
+    # Check that IDFT of DFT is identity
     x_even_hat = idft(dft(x_even))
     x_odd_hat = idft(dft(x_odd))
     assert torch.allclose(x_even, x_even_hat, atol=1e-5)
     assert torch.allclose(x_odd, x_odd_hat, atol=1e-5)
 
-    # Check that DFT o IDFT is identity
+    # Check that DFT of IDFT is identity
     x_even_hat = dft(idft(x_even))
     x_odd_hat = dft(idft(x_odd))
     assert torch.allclose(x_even, x_even_hat, atol=1e-5)
