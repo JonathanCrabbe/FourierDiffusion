@@ -2,4 +2,4 @@ _target_: fdiff.schedulers.vpsde_scheduler.VPScheduler
 eps: 1e-5
 beta_min: 0.1
 beta_max: 20
-fourier_noise_scaling: ${fourier_noise_scaling}
+fourier_noise_scaling: ${score_model.fourier_noise_scaling}

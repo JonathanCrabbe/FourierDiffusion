@@ -1,7 +1,5 @@
 random_seed: 42
 fourier_transform: True
-fourier_noise_scaling: False
-likelihood_weighting: False 
 standardize: True
 
 defaults:
