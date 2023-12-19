@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
 from typing import Any, Optional
 
+import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
@@ -11,8 +12,6 @@ from torch.utils.data import DataLoader, Dataset
 
 from fdiff.utils.dataclasses import collate_batch
 from fdiff.utils.fourier import dft
-
-import numpy as np
 
 
 class DiffusionDataset(Dataset):
@@ -24,17 +23,25 @@ class DiffusionDataset(Dataset):
         standardize: bool = False,
         X_ref: Optional[torch.Tensor] = None,
     ) -> None:
+        """Dataset for diffusion models.
+
+        Args:
+            X (torch.Tensor): Time series that are fed to the model.
+            y (Optional[torch.Tensor], optional): Potential labels. Defaults to None.
+            fourier_transform (bool, optional): Performs a Fourier transform on the time series. Defaults to False.
+            standardize (bool, optional): Standardize each feature in the dataset. Defaults to False.
+            X_ref (Optional[torch.Tensor], optional): Features used to compute the mean and std. Defaults to None.
+        """
         super().__init__()
         if fourier_transform:
             X = dft(X).detach()
         self.X = X
         self.y = y
         self.standardize = standardize
-        self.feature_mean = torch.empty(size=(self.X.size(1), self.X.size(2)))
-        self.feature_std = torch.empty(size=(self.X.size(1), self.X.size(2)))
         if X_ref is None:
             X_ref = X
-        self.compute_feature_statistics(X_ref)
+        self.feature_mean = X_ref.mean(dim=0)
+        self.feature_std = X_ref.std(dim=0)
 
     def __len__(self) -> int:
         return len(self.X)
@@ -47,11 +54,6 @@ class DiffusionDataset(Dataset):
         if self.y is not None:
             data["y"] = self.y[index]
         return data
-
-    def compute_feature_statistics(self, X_ref: torch.Tensor) -> None:
-        """Compute the mean and standard deviation of the features."""
-        self.feature_mean = X_ref.mean(dim=0)
-        self.feature_std = X_ref.std(dim=0)
 
 
 class Datamodule(pl.LightningDataModule, ABC):

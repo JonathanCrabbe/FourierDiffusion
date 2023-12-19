@@ -1,14 +1,14 @@
 from copy import deepcopy
-from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
 
-from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.sampler import DiffusionSampler
 from fdiff.schedulers.vpsde_scheduler import VPScheduler
 from fdiff.utils.dataclasses import DiffusableBatch
+
+from .test_datamodules import DummyDatamodule
 
 n_head = 4
 d_model = 8
@@ -119,55 +119,6 @@ def test_score_module_with_vpsde():
     # Check the shape of the samples
     assert samples.shape == (num_samples, max_len, n_channels)
 
-
-class DummyDatamodule(Datamodule):
-    def __init__(
-        self,
-        data_dir: Path = Path.cwd() / "data",
-        random_seed: int = 42,
-        batch_size: int = batch_size,
-        max_len: int = max_len,
-        n_channels: int = n_channels,
-        fourier_transform: bool = False,
-        standardize: bool = False,
-    ) -> None:
-        super().__init__(
-            data_dir=data_dir,
-            random_seed=random_seed,
-            batch_size=batch_size,
-            fourier_transform=fourier_transform,
-        )
-        self.max_len = max_len
-        self.n_channels = n_channels
-        self.batch_size = batch_size
-
-    def setup(self, stage: str = "fit") -> None:
-        torch.manual_seed(self.random_seed)
-        self.X_train = torch.randn(
-            (10 * self.batch_size, self.max_len, self.n_channels),
-            dtype=torch.float32,
-        )
-        self.y_train = torch.randint(
-            low=low, high=high, size=(10 * self.batch_size,), dtype=torch.long
-        )
-        self.X_test = torch.randn_like(self.X_train)
-        self.y_test = torch.randint_like(self.y_train, low=low, high=high)
-        self.compute_feature_statistics()
-
-    def download_data(self) -> None:
-        ...
-
-    def compute_feature_statistics(self) -> None:
-        """Compute the mean and standard deviation
-        of the features, along the batch dimension."""
-        self.feature_mean = self.X_train.mean(dim=0)
-        self.feature_std = self.X_train.std(dim=0)
-
     @property
     def dataset_name(self) -> str:
         return "dummy"
-
-
-if __name__ == "__main__":
-    # test_noise_adder()
-    test_score_module_with_vpsde()

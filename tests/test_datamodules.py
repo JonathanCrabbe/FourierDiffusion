@@ -45,15 +45,9 @@ class DummyDatamodule(Datamodule):
         )
         self.X_test = torch.randn_like(self.X_train)
         self.y_test = torch.randint_like(self.y_train, low=low, high=high)
-        self.compute_feature_statistics()
 
     def download_data(self) -> None:
         ...
-
-    def compute_feature_statistics(self) -> None:
-        """Compute the mean and standard deviation of the features, along the batch dimension."""
-        self.feature_mean = self.X_train.mean(dim=0)
-        self.feature_std = self.X_train.std(dim=0)
 
     @property
     def dataset_name(self) -> str:
