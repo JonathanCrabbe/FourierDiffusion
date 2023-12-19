@@ -145,6 +145,16 @@ class Datamodule(pl.LightningDataModule, ABC):
             "num_training_steps": len(self.train_dataloader()),
         }
 
+    @property
+    def feature_mean_and_std(self) -> tuple[torch.Tensor, torch.Tensor]:
+        train_set = DiffusionDataset(
+            X=self.X_train,
+            y=self.y_train,
+            fourier_transform=self.fourier_transform,
+            standardize=self.standardize,
+        )
+        return train_set.feature_mean, train_set.feature_std
+
 
 class ECGDatamodule(Datamodule):
     def __init__(

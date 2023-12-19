@@ -73,10 +73,7 @@ class SamplingRunner:
 
         # Map to the original scale if the input was standardized
         if self.datamodule.standardize:
-            train_loader = self.datamodule.train_dataloader()
-            train_dataset = train_loader.dataset
-            feature_std = train_dataset.feature_std
-            feature_mean = train_dataset.feature_mean
+            feature_mean, feature_std = self.datamodule.feature_mean_and_std
             X = X * feature_std + feature_mean
 
         # If sampling in frequency domain, bring back the sample to time domain
