@@ -1,6 +1,6 @@
 random_seed: 42
-fourier_transform: True
-standardize: True
+fourier_transform: false
+standardize: true
 
 defaults:
   - _self_
