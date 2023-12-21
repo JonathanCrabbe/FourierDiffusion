@@ -1,11 +1,12 @@
 from copy import deepcopy
 
+import pytest
 import pytorch_lightning as pl
 import torch
 
 from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.sampler import DiffusionSampler
-from fdiff.schedulers.sde import VPScheduler
+from fdiff.schedulers.sde import SDE, VEScheduler, VPScheduler
 from fdiff.utils.dataclasses import DiffusableBatch
 
 from .test_datamodules import DummyDatamodule
@@ -19,22 +20,21 @@ num_diffusion_steps = 10
 low = 0
 high = 10
 num_samples = 48
-beta_0 = 0.01
-beta_1 = 20
+beta_min = 0.01
+beta_max = 20
 batch_size = 50
 
 
-def test_noise_adder() -> None:
-    """Test the noise adder."""
-    # Set the parameters
-    beta_min = 0.01
-    beta_max = 1
-    max_len = 20
-    G = torch.ones(max_len)
-    G[0] *= 2
-
+@pytest.mark.parametrize(
+    "scheduler_type",
+    [
+        VEScheduler,
+        VPScheduler,
+    ],
+)
+def test_forward(scheduler_type: SDE) -> None:
     # Create the SDE
-    scheduler = VPScheduler(beta_min=beta_min, beta_max=beta_max)
+    scheduler: SDE = scheduler_type()
 
     # Create a dummy time series
     x = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
@@ -44,42 +44,39 @@ def test_noise_adder() -> None:
 
     assert x_noisy.shape == x.shape
 
-    beta = scheduler.get_beta(timestep=timesteps)
-    # Check that each element of beta is between beta_min and beta_max
-    assert torch.all(beta >= beta_min)
-    assert torch.all(beta <= beta_max)
 
+@pytest.mark.parametrize(
+    "scheduler_type",
+    [
+        VEScheduler,
+        VPScheduler,
+    ],
+)
+def test_backward(scheduler_type: SDE) -> None:
+    t = 0.5
+
+    scheduler: SDE = scheduler_type()
+    scheduler.set_noise_scaling(max_len=max_len)
     scheduler.set_timesteps(num_diffusion_steps=1000)
 
+    noise = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
     model_output = torch.randn(size=(batch_size, max_len, n_channels), device="cpu")
-    timesteps = torch.ones(size=(batch_size,), device="cpu") * 0.5
-    scheduler_output = scheduler.step(model_output, timestep=timesteps, sample=x_noisy)
-    assert scheduler_output.prev_sample.shape == x_noisy.shape
+
+    scheduler_output = scheduler.step(model_output, timestep=t, sample=noise)
+    assert scheduler_output.prev_sample.shape == noise.shape
 
 
-def instantiate_score_model() -> ScoreModule:
-    noise_scheduler = VPScheduler(
-        beta_min=beta_0, beta_max=beta_1, fourier_noise_scaling=False
-    )
-    score_model = ScoreModule(
-        n_channels=n_channels,
-        max_len=max_len,
-        noise_scheduler=noise_scheduler,
-        d_model=d_model,
-        n_head=n_head,
-        num_layers=num_layers,
-        num_training_steps=10,
-    )
-    return score_model
-
-
-def instantiate_trainer() -> pl.Trainer:
-    return pl.Trainer(max_epochs=1, accelerator="cpu")
-
-
-def test_score_module_with_vpsde() -> None:
+@pytest.mark.parametrize(
+    "scheduler_type",
+    [
+        VEScheduler,
+        VPScheduler,
+    ],
+)
+def test_training(scheduler_type: SDE) -> None:
     torch.manual_seed(42)
-    score_model = instantiate_score_model()
+    noise_scheduler = scheduler_type()
+    score_model = instantiate_score_model(noise_scheduler)
 
     # Check that the forward call produces tensor of the right shape
     X = torch.randn((batch_size, max_len, n_channels))
@@ -118,3 +115,20 @@ def test_score_module_with_vpsde() -> None:
 
     # Check the shape of the samples
     assert samples.shape == (num_samples, max_len, n_channels)
+
+
+def instantiate_score_model(scheduler: SDE) -> ScoreModule:
+    score_model = ScoreModule(
+        n_channels=n_channels,
+        max_len=max_len,
+        noise_scheduler=scheduler,
+        d_model=d_model,
+        n_head=n_head,
+        num_layers=num_layers,
+        num_training_steps=10,
+    )
+    return score_model
+
+
+def instantiate_trainer() -> pl.Trainer:
+    return pl.Trainer(max_epochs=1, accelerator="cpu")

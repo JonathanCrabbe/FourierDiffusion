@@ -105,6 +105,7 @@ class ScoreModule(pl.LightningModule):
             on_epoch=True,
             on_step=True,
         )
+        assert isinstance(loss, torch.Tensor)
         return loss
 
     def validation_step(
@@ -133,6 +134,7 @@ class ScoreModule(pl.LightningModule):
         # Depending on the scheduler, get the right loss function
 
         if isinstance(self.noise_scheduler, DDPMScheduler):
+            assert hasattr(self.noise_scheduler, "config")
             scheduler_config = self.noise_scheduler.config
             self.max_time = scheduler_config.num_train_timesteps
 
