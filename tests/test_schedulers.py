@@ -5,7 +5,7 @@ import torch
 
 from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.sampler import DiffusionSampler
-from fdiff.schedulers.vpsde_scheduler import VPScheduler
+from fdiff.schedulers.sde import VPScheduler
 from fdiff.utils.dataclasses import DiffusableBatch
 
 from .test_datamodules import DummyDatamodule
@@ -24,7 +24,7 @@ beta_1 = 20
 batch_size = 50
 
 
-def test_noise_adder():
+def test_noise_adder() -> None:
     """Test the noise adder."""
     # Set the parameters
     beta_min = 0.01
@@ -77,7 +77,7 @@ def instantiate_trainer() -> pl.Trainer:
     return pl.Trainer(max_epochs=1, accelerator="cpu")
 
 
-def test_score_module_with_vpsde():
+def test_score_module_with_vpsde() -> None:
     torch.manual_seed(42)
     score_model = instantiate_score_model()
 
@@ -118,7 +118,3 @@ def test_score_module_with_vpsde():
 
     # Check the shape of the samples
     assert samples.shape == (num_samples, max_len, n_channels)
-
-    @property
-    def dataset_name(self) -> str:
-        return "dummy"

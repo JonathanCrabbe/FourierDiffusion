@@ -1,23 +1,22 @@
+from typing import Callable
+
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-import math
-from typing import Callable, Optional
 from diffusers import DDPMScheduler
 from diffusers.optimization import get_cosine_schedule_with_warmup
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
-from fdiff.utils.losses import get_sde_loss_fn, get_ddpm_loss
+
 from fdiff.models.transformer import (
+    GaussianFourierProjection,
     PositionalEncoding,
     TimeEncoding,
-    GaussianFourierProjection,
 )
+from fdiff.schedulers.ddpm import CustomDDPMScheduler
+from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
-from fdiff.schedulers.custom_ddpm_scheduler import CustomDDPMScheduler
-from fdiff.schedulers.vpsde_scheduler import VPScheduler
-from fdiff.schedulers.vesde_scheduler import VEScheduler
+from fdiff.utils.losses import get_ddpm_loss, get_sde_loss_fn
 
 
 class ScoreModule(pl.LightningModule):
@@ -25,10 +24,7 @@ class ScoreModule(pl.LightningModule):
         self,
         n_channels: int,
         max_len: int,
-        noise_scheduler: DDPMScheduler
-        | CustomDDPMScheduler
-        | VPScheduler
-        | VEScheduler,
+        noise_scheduler: DDPMScheduler | CustomDDPMScheduler | SDE,
         fourier_noise_scaling: bool = True,
         d_model: int = 60,
         num_layers: int = 3,
@@ -99,7 +95,7 @@ class ScoreModule(pl.LightningModule):
 
     def training_step(
         self, batch: DiffusableBatch, batch_idx: int, dataloader_idx: int = 0
-    ):
+    ) -> torch.Tensor:
         loss = self.training_loss_fn(self, batch)
 
         self.log_dict(
@@ -134,10 +130,10 @@ class ScoreModule(pl.LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler_config}
 
     def set_loss_fn(self) -> tuple[Callable, Callable]:
-        # depending on the scheduler, get the right loss function
+        # Depending on the scheduler, get the right loss function
 
         if isinstance(self.noise_scheduler, DDPMScheduler):
-            scheduler_config = self.noise_scheduler.config  # type: ignore
+            scheduler_config = self.noise_scheduler.config
             self.max_time = scheduler_config.num_train_timesteps
 
             training_loss_fn = get_ddpm_loss(
@@ -148,9 +144,7 @@ class ScoreModule(pl.LightningModule):
             )
             return training_loss_fn, validation_loss_fn
 
-        elif isinstance(self.noise_scheduler, VPScheduler) or isinstance(
-            self.noise_scheduler, VEScheduler
-        ):
+        elif isinstance(self.noise_scheduler, SDE):
             training_loss_fn = get_sde_loss_fn(
                 scheduler=self.noise_scheduler,
                 train=True,
@@ -169,13 +163,11 @@ class ScoreModule(pl.LightningModule):
                 "Scheduler not implemented yet, cannot set loss function"
             )
 
-    def set_time_encoder(self):
-        if isinstance(self.noise_scheduler, DDPMScheduler):
+    def set_time_encoder(self) -> TimeEncoding | GaussianFourierProjection:
+        if isinstance(self.noise_scheduler, (DDPMScheduler, CustomDDPMScheduler)):
             return TimeEncoding(d_model=self.d_model, max_time=self.max_time)
 
-        elif isinstance(self.noise_scheduler, VPScheduler) or isinstance(
-            self.noise_scheduler, VEScheduler
-        ):
+        elif isinstance(self.noise_scheduler, SDE):
             return GaussianFourierProjection(d_model=self.d_model)
 
         else:

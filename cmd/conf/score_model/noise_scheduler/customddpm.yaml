@@ -1,2 +1,2 @@
-_target_: fdiff.schedulers.custom_ddpm_scheduler.CustomDDPMScheduler
+_target_: fdiff.schedulers.ddpm.CustomDDPMScheduler
 num_train_timesteps: 1000

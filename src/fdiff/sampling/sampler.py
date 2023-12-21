@@ -6,9 +6,8 @@ from diffusers import DDPMScheduler
 from tqdm import tqdm
 
 from fdiff.models.score_models import ScoreModule
-from fdiff.schedulers.custom_ddpm_scheduler import CustomDDPMScheduler
-from fdiff.schedulers.vesde_scheduler import VEScheduler
-from fdiff.schedulers.vpsde_scheduler import VPScheduler
+from fdiff.schedulers.ddpm import CustomDDPMScheduler
+from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
 
 
@@ -125,13 +124,6 @@ class DiffusionSampler:
                 requires_grad=False,
             )
 
-        elif isinstance(self.noise_scheduler, VPScheduler) or isinstance(
-            self.noise_scheduler, VEScheduler
-        ):
-            X = self.noise_scheduler.prior_sampling(
-                (batch_size, self.max_len, self.n_channels)
-            )
-
         elif isinstance(self.noise_scheduler, CustomDDPMScheduler):
             X = torch.randn(
                 (batch_size, self.max_len, self.n_channels),
@@ -140,13 +132,18 @@ class DiffusionSampler:
             )
             G = (
                 1
-                / (math.sqrt(2 * self.max_len))
+                / (math.sqrt(2))
                 * torch.eye(self.max_len, device=self.score_model.device)
             )
             G[0, 0] *= math.sqrt(2)
 
             # Scale by the covariance matrix
             X = torch.matmul(G, X)
+
+        elif isinstance(self.noise_scheduler, SDE):
+            X = self.noise_scheduler.prior_sampling(
+                (batch_size, self.max_len, self.n_channels)
+            )
 
         else:
             raise NotImplementedError("Scheduler not recognized.")

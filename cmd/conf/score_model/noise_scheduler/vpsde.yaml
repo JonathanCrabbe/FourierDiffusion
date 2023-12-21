@@ -1,4 +1,4 @@
-_target_: fdiff.schedulers.vpsde_scheduler.VPScheduler
+_target_: fdiff.schedulers.sde.VPScheduler
 eps: 1e-5
 beta_min: 0.1
 beta_max: 20

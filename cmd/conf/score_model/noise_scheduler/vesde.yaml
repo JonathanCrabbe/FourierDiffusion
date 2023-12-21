@@ -1,4 +1,4 @@
-_target_: fdiff.schedulers.vesde_scheduler.VEScheduler
+_target_: fdiff.schedulers.sde.VEScheduler
 eps: 1e-5
 sigma_min: 0.01
 sigma_max: 2
