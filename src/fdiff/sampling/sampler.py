@@ -1,4 +1,3 @@
-import math
 from typing import Optional
 
 import torch
@@ -124,26 +123,10 @@ class DiffusionSampler:
                 requires_grad=False,
             )
 
-        elif isinstance(self.noise_scheduler, CustomDDPMScheduler):
-            X = torch.randn(
-                (batch_size, self.max_len, self.n_channels),
-                device=self.score_model.device,
-                requires_grad=False,
-            )
-            G = (
-                1
-                / (math.sqrt(2))
-                * torch.eye(self.max_len, device=self.score_model.device)
-            )
-            G[0, 0] *= math.sqrt(2)
-
-            # Scale by the covariance matrix
-            X = torch.matmul(G, X)
-
         elif isinstance(self.noise_scheduler, SDE):
             X = self.noise_scheduler.prior_sampling(
                 (batch_size, self.max_len, self.n_channels)
-            )
+            ).to(device=self.score_model.device)
 
         else:
             raise NotImplementedError("Scheduler not recognized.")
