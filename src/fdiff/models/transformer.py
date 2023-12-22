@@ -1,8 +1,8 @@
 import math
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 
 
 class PositionalEncoding(nn.Module):
@@ -59,7 +59,7 @@ class GaussianFourierProjection(nn.Module):
     Courtesy of https://colab.research.google.com/drive/120kYYBOVa1i0TD85RjlEkFjaWDxSFUx3?usp=sharing#scrollTo=YyQtV7155Nht
     """
 
-    def __init__(self, d_model: int, scale=30.0):
+    def __init__(self, d_model: int, scale: float = 30.0):
         super().__init__()
         # Randomly sample weights during initialization. These weights are fixed
         # during optimization and are not trainable.
@@ -67,11 +67,13 @@ class GaussianFourierProjection(nn.Module):
         self.W = nn.Parameter(
             torch.randn((d_model + 1) // 2) * scale, requires_grad=False
         )
+
         self.dense = nn.Linear(d_model, d_model)
 
     def forward(self, x: torch.Tensor, timesteps: torch.Tensor) -> torch.Tensor:
         time_proj = timesteps[:, None] * self.W[None, :] * 2 * np.pi
         embeddings = torch.cat([torch.sin(time_proj), torch.cos(time_proj)], dim=-1)
+
         # Slice to get exactly d_model
         t_emb = embeddings[:, : self.d_model]  # (batch_size, d_model)
 
