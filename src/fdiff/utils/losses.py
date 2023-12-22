@@ -1,17 +1,21 @@
+from typing import Callable
+
 import torch
 import torch.nn as nn
-from fdiff.utils.dataclasses import DiffusableBatch
 import torch.nn.functional as F
+from diffusers import DDPMScheduler
+
+from fdiff.schedulers.sde import SDE
+from fdiff.utils.dataclasses import DiffusableBatch
 
 
 # Courtesy of https://github.com/yang-song/score_sde_pytorch/blob/main/losses.py
 def get_sde_loss_fn(
-    scheduler,
-    train,
-    reduce_mean=True,
-    likelihood_weighting=False,
-    eps=1e-5,
-):
+    scheduler: SDE,
+    train: bool,
+    reduce_mean: bool = True,
+    likelihood_weighting: bool = False,
+) -> Callable[[nn.Module, DiffusableBatch], torch.Tensor]:
     """Create a loss function for training with arbirary SDEs.
 
     Args:
@@ -33,7 +37,7 @@ def get_sde_loss_fn(
         else lambda *args, **kwargs: 0.5 * torch.sum(*args, **kwargs)
     )
 
-    def loss_fn(model, batch) -> torch.Tensor:
+    def loss_fn(model: nn.Module, batch: DiffusableBatch) -> torch.Tensor:
         """Compute the loss function.
 
         Args:
@@ -55,22 +59,23 @@ def get_sde_loss_fn(
         # Sample a time step uniformly from [eps, T]
         if timesteps is None:
             timesteps = (
-                torch.rand(X.shape[0], device=X.device) * (scheduler.T - eps) + eps
+                torch.rand(X.shape[0], device=X.device) * (scheduler.T - scheduler.eps)
+                + scheduler.eps
             )
 
         # Sample the gaussian noise
         z = torch.randn_like(X)  # (batch_size, max_len, n_channels)
 
-        std = scheduler.marginal_prob(X, timesteps)[1]  # (batch_size, max_len)
+        _, std = scheduler.marginal_prob(X, timesteps)  # (batch_size, max_len)
         var = std**2  # (batch_size, max_len)
 
         std_matrix = torch.diag_embed(std)  # (batch_size, max_len, max_len)
         inverse_std_matrix = torch.diag_embed(1 / std)  # (batch_size, max_len, max_len)
 
-        # compute Sigma^{1/2}z to be used for forward sampling
+        # compute Sigma^{1/2}z to be used for forward sampling: noise is x(t)
         noise = torch.matmul(std_matrix, z)  # (batch_size, max_len, n_channels)
 
-        # compute Sigma^{-1/2}z to be used for the loss
+        # compute Sigma^{-1/2}z to be used for the loss: target_noise is grad log p(x(t)|x(0))
         target_noise = torch.matmul(
             inverse_std_matrix, z
         )  # (batch_size, max_len, n_channels)
@@ -86,6 +91,8 @@ def get_sde_loss_fn(
         score = model(noisy_batch)
 
         if not likelihood_weighting:
+            # lambda(t) = E[||\grad log p(x(t)|x(0))||^2]
+
             # Compute 1/tr(\Sigma^{-1})
             weighting_factor = 1.0 / torch.sum(1.0 / var, dim=1)  # (batch_size,)
             assert weighting_factor.shape == (X.shape[0],)
@@ -94,6 +101,10 @@ def get_sde_loss_fn(
             losses = weighting_factor.view(-1, 1, 1) * torch.square(
                 score + target_noise
             )
+
+            # No relative minus size because:
+            # log(p(x(t)|x(0))) = -1/2 * (x(t) -mean)^{T} Cov^{-1} (x(t) - mean) + C
+            # grad log(p(x(t)|x(0))) = (-1) * Cov^{-1} (x(t) - mean)
 
             # Reduction
             losses = reduce_op(losses.reshape(losses.shape[0], -1), dim=-1)
@@ -117,8 +128,10 @@ def get_sde_loss_fn(
     return loss_fn
 
 
-def get_ddpm_loss(scheduler, train, max_time):
-    def loss_fn(model, batch) -> torch.Tensor:
+def get_ddpm_loss(
+    scheduler: DDPMScheduler, train: bool, max_time: int
+) -> Callable[[nn.Module, DiffusableBatch], torch.Tensor]:
+    def loss_fn(model: nn.Module, batch: DiffusableBatch) -> torch.Tensor:
         if train:
             model.train()
         else:
