@@ -107,7 +107,7 @@ def get_sde_loss_fn(
             # grad log(p(x(t)|x(0))) = (-1) * Cov^{-1} (x(t) - mean)
 
             # Reduction
-            losses = reduce_op(losses.reshape(losses.shape[0], -1), dim=-1)
+            losses = reduce_op(losses.reshape(losses.shape[0], -1), dim=-1)  # type: ignore
 
         else:
             # Compute the Mahalanobis distance, cf. https://arxiv.org/pdf/2111.13606.pdf + https://www.iro.umontreal.ca/~vincentp/Publications/smdae_techreport.pdf
@@ -120,7 +120,7 @@ def get_sde_loss_fn(
 
             # 3) Compute the loss
             losses = torch.square(scaled_difference)
-            losses = reduce_op(losses.reshape(losses.shape[0], -1), dim=-1)
+            losses = reduce_op(losses.reshape(losses.shape[0], -1), dim=-1)  # type: ignore
 
         loss = torch.mean(losses)
         return loss

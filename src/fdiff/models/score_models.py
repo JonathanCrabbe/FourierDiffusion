@@ -13,7 +13,6 @@ from fdiff.models.transformer import (
     PositionalEncoding,
     TimeEncoding,
 )
-from fdiff.schedulers.ddpm import CustomDDPMScheduler
 from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
 from fdiff.utils.losses import get_ddpm_loss, get_sde_loss_fn
@@ -24,7 +23,7 @@ class ScoreModule(pl.LightningModule):
         self,
         n_channels: int,
         max_len: int,
-        noise_scheduler: DDPMScheduler | CustomDDPMScheduler | SDE,
+        noise_scheduler: DDPMScheduler | SDE,
         fourier_noise_scaling: bool = True,
         d_model: int = 60,
         num_layers: int = 3,
@@ -105,7 +104,6 @@ class ScoreModule(pl.LightningModule):
             on_epoch=True,
             on_step=True,
         )
-        assert isinstance(loss, torch.Tensor)
         return loss
 
     def validation_step(
@@ -130,7 +128,12 @@ class ScoreModule(pl.LightningModule):
         lr_scheduler_config = {"scheduler": lr_scheduler, "interval": "step"}
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler_config}
 
-    def set_loss_fn(self) -> tuple[Callable, Callable]:
+    def set_loss_fn(
+        self,
+    ) -> tuple[
+        Callable[[nn.Module, DiffusableBatch], torch.Tensor],
+        Callable[[nn.Module, DiffusableBatch], torch.Tensor],
+    ]:
         # Depending on the scheduler, get the right loss function
 
         if isinstance(self.noise_scheduler, DDPMScheduler):
@@ -162,11 +165,11 @@ class ScoreModule(pl.LightningModule):
 
         else:
             raise NotImplementedError(
-                "Scheduler not implemented yet, cannot set loss function"
+                f"Scheduler {self.noise_scheduler} not implemented yet, cannot set loss function."
             )
 
     def set_time_encoder(self) -> TimeEncoding | GaussianFourierProjection:
-        if isinstance(self.noise_scheduler, (DDPMScheduler, CustomDDPMScheduler)):
+        if isinstance(self.noise_scheduler, DDPMScheduler):
             return TimeEncoding(d_model=self.d_model, max_time=self.max_time)
 
         elif isinstance(self.noise_scheduler, SDE):
@@ -174,5 +177,5 @@ class ScoreModule(pl.LightningModule):
 
         else:
             raise NotImplementedError(
-                "Scheduler not implemented yet, cannot set loss function"
+                f"Scheduler {self.noise_scheduler} not implemented yet, cannot set time encoder."
             )
