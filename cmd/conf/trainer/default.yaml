@@ -5,5 +5,6 @@ gradient_clip_val: 1.0
 enable_progress_bar: true
 logger:
   _target_: pytorch_lightning.loggers.WandbLogger
+  log_model: true
 defaults:
   - callbacks: default
