@@ -90,3 +90,6 @@ exclude = [
     '^file1\.py$',  # TOML literal string (single-quotes, no escaping necessary)
 ]
 ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"

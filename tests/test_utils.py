@@ -38,14 +38,14 @@ def test_dft() -> None:
     x_even = torch.randn(batch_size, max_len, n_channels)
     x_odd = torch.randn(batch_size, max_len + 1, n_channels)
 
-    # Compute the DFT
-    x_even_tilde = dft(x_even)
-    x_odd_tilde = dft(x_odd)
+    # Check that IDFT of DFT is identity
+    x_even_hat = idft(dft(x_even))
+    x_odd_hat = idft(dft(x_odd))
+    assert torch.allclose(x_even, x_even_hat, atol=1e-5)
+    assert torch.allclose(x_odd, x_odd_hat, atol=1e-5)
 
-    # Compute the inverse DFT
-    x_even_hat = idft(x_even_tilde)
-    x_odd_hat = idft(x_odd_tilde)
-
-    # Check that the inverse DFT is the original time series
+    # Check that DFT of IDFT is identity
+    x_even_hat = dft(idft(x_even))
+    x_odd_hat = dft(idft(x_odd))
     assert torch.allclose(x_even, x_even_hat, atol=1e-5)
     assert torch.allclose(x_odd, x_odd_hat, atol=1e-5)

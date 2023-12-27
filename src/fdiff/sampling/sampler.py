@@ -1,9 +1,12 @@
 from typing import Optional
 
 import torch
+from diffusers import DDPMScheduler
 from tqdm import tqdm
 
 from fdiff.models.score_models import ScoreModule
+from fdiff.schedulers.ddpm import CustomDDPMScheduler
+from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
 
 
@@ -15,6 +18,11 @@ class DiffusionSampler:
     ) -> None:
         self.score_model = score_model
         self.noise_scheduler = score_model.noise_scheduler
+
+        # Disable clipping for the noise scheduler
+        if isinstance(self.noise_scheduler, (DDPMScheduler, CustomDDPMScheduler)):
+            self.noise_scheduler.config.clip_sample = False
+
         self.sample_batch_size = sample_batch_size
         self.n_channels = score_model.n_channels
         self.max_len = score_model.max_len
@@ -30,7 +38,6 @@ class DiffusionSampler:
 
         # Predict score for the current batch
         score = self.score_model(batch)
-
         # Apply a step of reverse diffusion
         output = self.noise_scheduler.step(
             model_output=score, timestep=timesteps[0].item(), sample=X
@@ -76,11 +83,7 @@ class DiffusionSampler:
                     self.sample_batch_size,
                 )
                 # Sample from noise distribution
-                X = torch.randn(
-                    (batch_size, self.max_len, self.n_channels),
-                    device=self.score_model.device,
-                    requires_grad=False,
-                )
+                X = self.sample_prior(batch_size)
 
                 # Perform the diffusion step by step
                 for t in tqdm(
@@ -94,16 +97,38 @@ class DiffusionSampler:
                     timesteps = torch.full(
                         (batch_size,),
                         t,
-                        dtype=torch.long,
+                        dtype=torch.long
+                        if isinstance(t.item(), int)
+                        else torch.float32,
                         device=self.score_model.device,
                         requires_grad=False,
                     )
                     # Create diffusable batch
                     batch = DiffusableBatch(X=X, y=None, timesteps=timesteps)
                     # Return denoised X
+
                     X = self.reverse_diffusion_step(batch)
 
                 # Add the samples to the list
                 all_samples.append(X.cpu())
 
         return torch.cat(all_samples, dim=0)
+
+    def sample_prior(self, batch_size: int) -> torch.Tensor:
+        # depending on the scheduler, the prior distribution might be different
+        if isinstance(self.noise_scheduler, DDPMScheduler):
+            X = torch.randn(
+                (batch_size, self.max_len, self.n_channels),
+                device=self.score_model.device,
+                requires_grad=False,
+            )
+
+        elif isinstance(self.noise_scheduler, SDE):
+            X = self.noise_scheduler.prior_sampling(
+                (batch_size, self.max_len, self.n_channels)
+            ).to(device=self.score_model.device)
+
+        else:
+            raise NotImplementedError("Scheduler not recognized.")
+
+        return X

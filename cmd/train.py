@@ -51,6 +51,9 @@ class TrainingRunner:
             self.score_model = self.score_model(**training_params)
 
     def train(self) -> None:
+        assert not (
+            self.score_model.scale_noise and not self.datamodule.fourier_transform
+        ), "You cannot use noise scaling without the Fourier transform."
         self.trainer.fit(model=self.score_model, datamodule=self.datamodule)
 
 

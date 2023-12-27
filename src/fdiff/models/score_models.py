@@ -1,14 +1,21 @@
+from typing import Callable
+
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from diffusers import DDPMScheduler
 from diffusers.optimization import get_cosine_schedule_with_warmup
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
 
-from fdiff.models.transformer import PositionalEncoding, TimeEncoding
+from fdiff.models.transformer import (
+    GaussianFourierProjection,
+    PositionalEncoding,
+    TimeEncoding,
+)
+from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
+from fdiff.utils.losses import get_ddpm_loss, get_sde_loss_fn
 
 
 class ScoreModule(pl.LightningModule):
@@ -16,28 +23,34 @@ class ScoreModule(pl.LightningModule):
         self,
         n_channels: int,
         max_len: int,
-        noise_scheduler: DDPMScheduler,
+        noise_scheduler: DDPMScheduler | SDE,
+        fourier_noise_scaling: bool = True,
         d_model: int = 60,
         num_layers: int = 3,
         n_head: int = 12,
         num_training_steps: int = 1000,
         lr_max: float = 1e-3,
+        likelihood_weighting: bool = False,
     ) -> None:
         super().__init__()
         # Hyperparameters
         self.max_len = max_len
         self.n_channels = n_channels
-        assert hasattr(noise_scheduler, "config")
-        self.max_time = noise_scheduler.config.num_train_timesteps
-        assert isinstance(self.max_time, int)
+
         self.noise_scheduler = noise_scheduler
         self.num_warmup_steps = num_training_steps // 10
         self.num_training_steps = num_training_steps
         self.lr_max = lr_max
+        self.d_model = d_model
+        self.scale_noise = fourier_noise_scaling
+
+        # Loss function
+        self.likelihood_weighting = likelihood_weighting
+        self.training_loss_fn, self.validation_loss_fn = self.set_loss_fn()
 
         # Model components
         self.pos_encoder = PositionalEncoding(d_model=d_model, max_len=self.max_len)
-        self.time_encoder = TimeEncoding(d_model=d_model, max_time=self.max_time)
+        self.time_encoder = self.set_time_encoder()
         self.embedder = nn.Linear(in_features=n_channels, out_features=d_model)
         self.unembedder = nn.Linear(in_features=d_model, out_features=n_channels)
         transformer_layer = nn.TransformerEncoderLayer(
@@ -82,31 +95,8 @@ class ScoreModule(pl.LightningModule):
     def training_step(
         self, batch: DiffusableBatch, batch_idx: int, dataloader_idx: int = 0
     ) -> torch.Tensor:
-        # Get X and timesteps
-        X = batch.X
-        timesteps = batch.timesteps
+        loss = self.training_loss_fn(self, batch)
 
-        # If no timesteps are provided, sample them randomly
-        if timesteps is None:
-            timesteps = torch.randint(
-                low=0,
-                high=self.max_time,
-                size=(len(batch),),
-                dtype=torch.long,
-                device=batch.device,
-            )
-
-        # Sample noise from distribution and add it to X
-        noise = torch.randn_like(X, device=batch.device)
-        assert hasattr(self.noise_scheduler, "add_noise")
-        X_noisy = self.noise_scheduler.add_noise(
-            original_samples=X, noise=noise, timesteps=timesteps
-        )
-        noisy_batch = DiffusableBatch(X=X_noisy, y=batch.y, timesteps=timesteps)
-
-        # Predict noise from score model
-        noise_pred = self.forward(noisy_batch)
-        loss = F.mse_loss(noise_pred, noise)
         self.log_dict(
             {"train/loss": loss},
             prog_bar=True,
@@ -119,31 +109,7 @@ class ScoreModule(pl.LightningModule):
     def validation_step(
         self, batch: DiffusableBatch, batch_idx: int, dataloader_idx: int = 0
     ) -> None:
-        # Get X and timesteps
-        X = batch.X
-        timesteps = batch.timesteps
-
-        # If no timesteps are provided, sample them randomly
-        if timesteps is None:
-            timesteps = torch.randint(
-                low=0,
-                high=self.max_time,
-                size=(len(batch),),
-                dtype=torch.long,
-                device=batch.device,
-            )
-
-        # Sample noise from distribution and add it to X
-        noise = torch.randn_like(X, device=batch.device)
-        assert hasattr(self.noise_scheduler, "add_noise")
-        X_noisy = self.noise_scheduler.add_noise(
-            original_samples=X, noise=noise, timesteps=timesteps
-        )
-        noisy_batch = DiffusableBatch(X=X_noisy, y=batch.y, timesteps=timesteps)
-
-        # Predict noise from score model
-        noise_pred = self.forward(noisy_batch)
-        loss = F.mse_loss(noise_pred, noise)
+        loss = self.validation_loss_fn(self, batch)
         self.log_dict(
             {"val/loss": loss},
             prog_bar=True,
@@ -161,3 +127,55 @@ class ScoreModule(pl.LightningModule):
         )
         lr_scheduler_config = {"scheduler": lr_scheduler, "interval": "step"}
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler_config}
+
+    def set_loss_fn(
+        self,
+    ) -> tuple[
+        Callable[[nn.Module, DiffusableBatch], torch.Tensor],
+        Callable[[nn.Module, DiffusableBatch], torch.Tensor],
+    ]:
+        # Depending on the scheduler, get the right loss function
+
+        if isinstance(self.noise_scheduler, DDPMScheduler):
+            assert hasattr(self.noise_scheduler, "config")
+            scheduler_config = self.noise_scheduler.config
+            self.max_time = scheduler_config.num_train_timesteps
+
+            training_loss_fn = get_ddpm_loss(
+                scheduler=self.noise_scheduler, train=True, max_time=self.max_time
+            )
+            validation_loss_fn = get_ddpm_loss(
+                scheduler=self.noise_scheduler, train=False, max_time=self.max_time
+            )
+            return training_loss_fn, validation_loss_fn
+
+        elif isinstance(self.noise_scheduler, SDE):
+            training_loss_fn = get_sde_loss_fn(
+                scheduler=self.noise_scheduler,
+                train=True,
+                likelihood_weighting=self.likelihood_weighting,
+            )
+            validation_loss_fn = get_sde_loss_fn(
+                scheduler=self.noise_scheduler,
+                train=False,
+                likelihood_weighting=self.likelihood_weighting,
+            )
+
+            return training_loss_fn, validation_loss_fn
+
+        else:
+            raise NotImplementedError(
+                f"Scheduler {self.noise_scheduler} not implemented yet, cannot set loss function."
+            )
+
+    def set_time_encoder(self) -> TimeEncoding | GaussianFourierProjection:
+        if isinstance(self.noise_scheduler, DDPMScheduler):
+            return TimeEncoding(d_model=self.d_model, max_time=self.max_time)
+
+        elif isinstance(self.noise_scheduler, SDE):
+            return GaussianFourierProjection(d_model=self.d_model)
+
+        else:
+            raise NotImplementedError(
+                f"Scheduler {self.noise_scheduler} not implemented yet, cannot set time encoder."
+            )

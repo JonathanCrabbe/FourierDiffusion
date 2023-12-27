@@ -42,7 +42,6 @@ class SamplingRunner:
         self.fourier_transform: bool = self.datamodule.fourier_transform
         self.datamodule.prepare_data()
         self.datamodule.setup()
-
         # Get number of steps and samples
         self.num_samples: int = cfg.num_samples
         self.num_diffusion_steps: int = cfg.num_diffusion_steps
@@ -67,9 +66,15 @@ class SamplingRunner:
 
     def sample(self) -> None:
         # Sample from score model
+
         X = self.sampler.sample(
             num_samples=self.num_samples, num_diffusion_steps=self.num_diffusion_steps
         )
+
+        # Map to the original scale if the input was standardized
+        if self.datamodule.standardize:
+            feature_mean, feature_std = self.datamodule.feature_mean_and_std
+            X = X * feature_std + feature_mean
 
         # If sampling in frequency domain, bring back the sample to time domain
         if self.fourier_transform:
