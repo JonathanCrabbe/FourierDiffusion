@@ -11,6 +11,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
+from fdiff.utils.callbacks import SamplingCallback
 from fdiff.utils.extraction import dict_to_str, get_training_params
 from fdiff.utils.wandb import maybe_initialize_wandb
 
@@ -49,6 +50,11 @@ class TrainingRunner:
         if isinstance(self.score_model, partial):
             training_params = get_training_params(self.datamodule, self.trainer)
             self.score_model = self.score_model(**training_params)
+
+        # Possibly setup the datamodule in the sampling callback
+        for callback in self.trainer.callbacks:  # type: ignore
+            if isinstance(callback, SamplingCallback):
+                callback.setup_datamodule(datamodule=self.datamodule)
 
     def train(self) -> None:
         assert not (
