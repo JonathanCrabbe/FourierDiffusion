@@ -42,6 +42,7 @@ class DiffusionDataset(Dataset):
             X_ref = X
         elif fourier_transform:
             X_ref = dft(X_ref).detach()
+        assert isinstance(X_ref, torch.Tensor)
         self.feature_mean = X_ref.mean(dim=0)
         self.feature_std = X_ref.std(dim=0)
 
