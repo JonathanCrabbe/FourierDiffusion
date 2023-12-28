@@ -40,6 +40,8 @@ class DiffusionDataset(Dataset):
         self.standardize = standardize
         if X_ref is None:
             X_ref = X
+        elif fourier_transform:
+            X_ref = dft(X_ref).detach()
         self.feature_mean = X_ref.mean(dim=0)
         self.feature_std = X_ref.std(dim=0)
 

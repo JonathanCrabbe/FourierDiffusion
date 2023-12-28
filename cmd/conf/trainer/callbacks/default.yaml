@@ -3,9 +3,6 @@
   monitor: val/loss
   filename: "epoch={epoch}-val_loss={val/loss:.2f}"
   auto_insert_metric_name: false
-- _target_: pytorch_lightning.callbacks.EarlyStopping
-  monitor: val/loss
-  patience: 20
 - _target_: fdiff.utils.callbacks.SamplingCallback
   every_n_epochs: 10
   sample_batch_size: ${datamodule.batch_size}
