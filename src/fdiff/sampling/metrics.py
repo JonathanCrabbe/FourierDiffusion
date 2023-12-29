@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod, abstractproperty
 from functools import partial
-from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import torch
+
 from fdiff.utils.fourier import dft
 from fdiff.utils.tensors import check_flat_array
 from fdiff.utils.wasserstein import WassersteinDistances
@@ -15,7 +15,7 @@ class Metric(ABC):
         self.original_samples = check_flat_array(original_samples)
 
     @abstractmethod
-    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, float]:
+    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, Any]:
         ...
 
     @abstractproperty
@@ -53,7 +53,7 @@ class MetricCollection:
         self.metrics_freq = metrics_freq
         self.include_baselines = include_baselines
 
-    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, float]:
+    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, Any]:
         metric_dict = {}
         other_samples_freq = dft(other_samples)
         for metric_time, metric_freq in zip(self.metrics_time, self.metrics_freq):
@@ -86,22 +86,27 @@ class SlicedWasserstein(Metric):
         original_samples: np.ndarray | torch.Tensor,
         random_seed: int,
         num_directions: int,
+        save_all_distances: bool = False,
     ) -> None:
         super().__init__(original_samples=original_samples)
         self.random_seed = random_seed
         self.num_directions = num_directions
+        self.save_all_distances = save_all_distances
 
-    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, float]:
+    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, Any]:
         wd = WassersteinDistances(
             original_data=self.original_samples,
             other_data=check_flat_array(other_samples),
             seed=self.random_seed,
         )
         distances = wd.sliced_distances(self.num_directions)
-        return {
+        metrics = {
             "sliced_wasserstein_mean": float(np.mean(distances)),
             "sliced_wasserstein_max": float(np.max(distances)),
         }
+        if self.save_all_distances:
+            metrics["sliced_wasserstein_all"] = distances.tolist()
+        return metrics
 
     @property
     def baseline_metrics(self) -> dict[str, float]:
@@ -141,31 +146,26 @@ class MarginalWasserstein(Metric):
         self,
         original_samples: np.ndarray | torch.Tensor,
         random_seed: int,
+        save_all_distances: bool = False,
     ) -> None:
         super().__init__(original_samples=original_samples)
         self.random_seed = random_seed
+        self.save_all_distances = save_all_distances
 
-    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, float]:
+    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, Any]:
         wd = WassersteinDistances(
             original_data=self.original_samples,
             other_data=check_flat_array(other_samples),
             seed=self.random_seed,
         )
         distances = wd.marginal_distances()
-        return {
+        metrics = {
             "marginal_wasserstein_mean": float(np.mean(distances)),
             "marginal_wasserstein_max": float(np.max(distances)),
         }
-
-    def save(self, other_samples: np.ndarray | torch.Tensor, path: str | Path) -> None:
-        # Save the distances array for post-processing
-        wd = WassersteinDistances(
-            original_data=self.original_samples,
-            other_data=check_flat_array(other_samples),
-            seed=self.random_seed,
-        )
-        distances = wd.marginal_distances()
-        np.save(path, distances)
+        if self.save_all_distances:
+            metrics["marginal_wasserstein_all"] = distances.tolist()
+        return metrics
 
     @property
     def baseline_metrics(self) -> dict[str, float]:
