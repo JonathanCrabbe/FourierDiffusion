@@ -49,6 +49,7 @@ dependencies = [
   "wandb",
   "POT",
   "tables",
+  "einops",
 ]
 
 
