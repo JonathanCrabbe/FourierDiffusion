@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from fdiff.utils.dataclasses import collate_batch
 from fdiff.utils.fourier import dft
+from fdiff.utils.preprocessing import mimic_preprocess
 
 
 class DiffusionDataset(Dataset):
@@ -84,10 +85,9 @@ class Datamodule(pl.LightningDataModule, ABC):
 
     def prepare_data(self) -> None:
         if not self.data_dir.exists():
-            logging.info(f"Downloading {self.dataset_name} dataset in {self.data_dir}")
+            logging.info(f"Downloading {self.dataset_name} dataset in {self.data_dir}.")
             os.makedirs(self.data_dir)
             self.download_data()
-            logging.info(f"Dataset {self.dataset_name} downloaded in {self.data_dir}")
 
     @abstractmethod
     def download_data(self) -> None:
@@ -267,3 +267,52 @@ class SyntheticDatamodule(Datamodule):
     @property
     def dataset_name(self) -> str:
         return "synthetic"
+
+
+class MIMICIIIDatamodule(Datamodule):
+    def __init__(
+        self,
+        data_dir: Path | str = Path.cwd() / "data",
+        random_seed: int = 42,
+        batch_size: int = 32,
+        fourier_transform: bool = False,
+        standardize: bool = False,
+    ) -> None:
+        super().__init__(
+            data_dir=data_dir,
+            random_seed=random_seed,
+            batch_size=batch_size,
+            fourier_transform=fourier_transform,
+            standardize=standardize,
+        )
+
+    def setup(self, stage: str = "fit") -> None:
+        if (
+            not (self.data_dir / "X_train.pt").exists()
+            or not (self.data_dir / "X_test.pt").exists()
+        ):
+            logging.info(
+                f"Preprocessed tensors for {self.dataset_name} not found. "
+                f"Now running the preprocessing pipeline."
+            )
+            mimic_preprocess(data_dir=self.data_dir, random_seed=self.random_seed)
+            logging.info(
+                f"Preprocessing pipeline finished, tensors saved in {self.data_dir}."
+            )
+
+        # Load preprocessed tensors
+        self.X_train = torch.load(self.data_dir / "X_train.pt")
+        self.X_test = torch.load(self.data_dir / "X_test.pt")
+
+    def download_data(self) -> None:
+        dataset_path = self.data_dir / "all_hourly_data.h5"
+        assert dataset_path.exists(), (
+            f"Dataset {dataset_path} does not exist. "
+            "Because MIMIC-III is a restricted dataset, you need to download it yourself. "
+            "Our implementation relies on the default MIMIC-Extract preprocessed version of the dataset. "
+            "Please follow the instruction on https://github.com/MLforHealth/MIMIC_Extract/tree/master."
+        )
+
+    @property
+    def dataset_name(self) -> str:
+        return "mimiciii"
