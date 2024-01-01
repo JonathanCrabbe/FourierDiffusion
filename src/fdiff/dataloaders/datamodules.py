@@ -277,6 +277,7 @@ class MIMICIIIDatamodule(Datamodule):
         batch_size: int = 32,
         fourier_transform: bool = False,
         standardize: bool = False,
+        n_feats: int = 104,
     ) -> None:
         super().__init__(
             data_dir=data_dir,
@@ -285,6 +286,7 @@ class MIMICIIIDatamodule(Datamodule):
             fourier_transform=fourier_transform,
             standardize=standardize,
         )
+        self.n_feats = n_feats
 
     def setup(self, stage: str = "fit") -> None:
         if (
@@ -303,6 +305,17 @@ class MIMICIIIDatamodule(Datamodule):
         # Load preprocessed tensors
         self.X_train = torch.load(self.data_dir / "X_train.pt")
         self.X_test = torch.load(self.data_dir / "X_test.pt")
+
+        assert isinstance(self.X_train, torch.Tensor)
+        assert isinstance(self.X_test, torch.Tensor)
+
+        # Filter the tensors to keep the features with highest variance accross the population
+        # The variance for each feature is averaged accrossed all time steps
+        top_feats = torch.argsort(self.X_train.std(1).mean(0), descending=True)[
+            : self.n_feats
+        ]
+        self.X_train = self.X_train[:, :, top_feats]
+        self.X_test = self.X_test[:, :, top_feats]
 
     def download_data(self) -> None:
         dataset_path = self.data_dir / "all_hourly_data.h5"
