@@ -48,7 +48,10 @@ class SamplingCallback(pl.Callback):
     def on_train_epoch_end(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
     ) -> None:
-        if trainer.current_epoch % self.every_n_epochs == 0:
+        if (
+            trainer.current_epoch % self.every_n_epochs == 0
+            or trainer.current_epoch + 1 == trainer.max_epochs
+        ):
             # Sample from score model
             X = self.sample()
 
