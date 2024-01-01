@@ -4,4 +4,4 @@ random_seed: ${random_seed}
 fourier_transform: ${fourier_transform}
 standardize: ${standardize}
 batch_size: 64
-n_feats: 20
+n_feats: 50
