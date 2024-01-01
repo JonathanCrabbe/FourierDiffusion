@@ -311,7 +311,7 @@ class MIMICIIIDatamodule(Datamodule):
 
         # Filter the tensors to keep the features with highest variance accross the population
         # The variance for each feature is averaged accrossed all time steps
-        top_feats = torch.argsort(self.X_train.std(1).mean(0), descending=True)[
+        top_feats = torch.argsort(self.X_train.std(0).mean(0), descending=True)[
             : self.n_feats
         ]
         self.X_train = self.X_train[:, :, top_feats]
