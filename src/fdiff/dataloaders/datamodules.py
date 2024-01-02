@@ -370,6 +370,7 @@ class NASDAQDatamodule(Datamodule):
         assert isinstance(self.X_test, torch.Tensor)
         assert self.X_train.shape[1:] == self.X_test.shape[1:] == (252, 6)
 
+        # Filter out the last feature (volume) due to awkward scaling
         self.X_train = self.X_train[:, :, :-1]
         self.X_test = self.X_test[:, :, :-1]
 
