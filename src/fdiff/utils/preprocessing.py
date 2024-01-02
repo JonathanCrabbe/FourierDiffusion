@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from einops import rearrange
+from tqdm import tqdm
 
 
 def mimic_imputer(df: pd.DataFrame) -> pd.DataFrame:
@@ -84,7 +85,7 @@ def mimic_preprocess(data_dir: Path, random_seed: int, train_frac: float = 0.8) 
     Saves the preprocessed data as .pt files in the same directory.
 
     Args:
-        data_dir (Path): Path in which the raw "all_hourly_data.h5 file is stored.
+        data_dir (Path): Path in which the raw "all_hourly_data.h5" file is stored.
     """
     dataset_path = data_dir / "all_hourly_data.h5"
     GAP_TIME = 6  # In hours
@@ -173,6 +174,84 @@ def mimic_preprocess(data_dir: Path, random_seed: int, train_frac: float = 0.8) 
     # Check that each time series has 24 time steps and 104 features
     for X in X_train, X_test:
         assert X.size() == (len(X), 24, 104)
+
+    # Save the preprocessed tensors.
+    for X, name in zip([X_train, X_test], ["train", "test"]):
+        torch.save(X, data_dir / f"X_{name}.pt")
+
+
+def nasdaq_preprocess(
+    data_dir: Path,
+    random_seed: int,
+    train_frac: float = 0.9,
+    start_date: str = "2019-01-01",
+    end_date: str = "2020-01-01",
+) -> None:
+    """Preprocess the NASDAQ dataset from the raw .csv file in data_dir.
+    Saves the preprocessed data as .pt files in the same directory.
+
+    Args:
+        data_dir (Path): Path in which the raw financial data is stored.
+    """
+
+    # Collate all stock data into a single dataframe
+    df_list = []
+    stock_paths = list((data_dir / "stocks").glob("*.csv"))
+    for path in tqdm(
+        stock_paths, unit="stock", leave=False, desc="Loading stock data", colour="blue"
+    ):
+        df_stock = pd.read_csv(path)
+        df_stock["Name"] = path.stem.strip(".csv")
+        df_list.append(df_stock)
+    df = pd.concat(df_list, axis=0, ignore_index=True)
+
+    # Check that all the stocks have been recorded
+    assert len(df["Name"].unique()) == len(stock_paths)
+
+    # Convert date column to datetime
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    start_time = pd.to_datetime(start_date)
+    end_time = pd.to_datetime(end_date)
+
+    # Remove stocks that are not active in the whole time interval
+    stocks_older_than_start = set()
+    stocks_active_in_end = set()
+    for stock, valid in (df.groupby("Name")["Date"].min() <= start_time).items():
+        if valid:
+            stocks_older_than_start.add(stock)
+    for stock, valid in (df.groupby("Name")["Date"].max() >= end_time).items():
+        if valid:
+            stocks_active_in_end.add(stock)
+    valid_stocks = stocks_older_than_start.intersection(stocks_active_in_end)
+    df = df[
+        df["Name"].isin(valid_stocks)
+        & (df["Date"] >= start_time)
+        & (df["Date"] < end_time)
+    ]
+
+    # Remove stocks with missing days
+    stocks_no_missing_day = set()
+    for stock, valid in (df.groupby("Name")["Date"].nunique() == 252).items():
+        if valid:
+            stocks_no_missing_day.add(stock)
+    df = df[df["Name"].isin(stocks_no_missing_day)]
+
+    # Create a tensor of shape (num_stocks, num_days, num_features) from df
+    df_pivot = df.pivot_table(
+        index="Name",
+        columns="Date",
+        values=["Open", "High", "Low", "Close", "Adj Close", "Volume"],  # type: ignore
+    )
+    X = torch.tensor(df_pivot.values, dtype=torch.float32)
+    X = rearrange(X, "stock (feature day) -> stock day feature", day=252)
+
+    # Train-test split
+    torch.manual_seed(random_seed)
+    num_train = int(train_frac * len(X))
+    perm_idx = torch.randperm(len(X))
+    train_stocks, test_stocks = perm_idx[:num_train], perm_idx[num_train:]
+    X_train, X_test = X[train_stocks], X[test_stocks]
 
     # Save the preprocessed tensors.
     for X, name in zip([X_train, X_test], ["train", "test"]):

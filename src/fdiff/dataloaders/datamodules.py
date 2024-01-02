@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from fdiff.utils.dataclasses import collate_batch
 from fdiff.utils.fourier import dft
-from fdiff.utils.preprocessing import mimic_preprocess
+from fdiff.utils.preprocessing import mimic_preprocess, nasdaq_preprocess
 
 
 class DiffusionDataset(Dataset):
@@ -329,3 +329,58 @@ class MIMICIIIDatamodule(Datamodule):
     @property
     def dataset_name(self) -> str:
         return "mimiciii"
+
+
+class NASDAQDatamodule(Datamodule):
+    def __init__(
+        self,
+        data_dir: Path | str = Path.cwd() / "data",
+        random_seed: int = 42,
+        batch_size: int = 32,
+        fourier_transform: bool = False,
+        standardize: bool = False,
+    ) -> None:
+        super().__init__(
+            data_dir=data_dir,
+            random_seed=random_seed,
+            batch_size=batch_size,
+            fourier_transform=fourier_transform,
+            standardize=standardize,
+        )
+
+    def setup(self, stage: str = "fit") -> None:
+        if (
+            not (self.data_dir / "X_train.pt").exists()
+            or not (self.data_dir / "X_test.pt").exists()
+        ):
+            logging.info(
+                f"Preprocessed tensors for {self.dataset_name} not found. "
+                f"Now running the preprocessing pipeline."
+            )
+            nasdaq_preprocess(data_dir=self.data_dir, random_seed=self.random_seed)
+            logging.info(
+                f"Preprocessing pipeline finished, tensors saved in {self.data_dir}."
+            )
+
+        # Load preprocessed tensors
+        self.X_train = torch.load(self.data_dir / "X_train.pt")
+        self.X_test = torch.load(self.data_dir / "X_test.pt")
+
+        assert isinstance(self.X_train, torch.Tensor)
+        assert isinstance(self.X_test, torch.Tensor)
+        assert self.X_train.shape[1:] == self.X_test.shape[1:] == (252, 6)
+
+        self.X_train = self.X_train[:, :, :-1]
+        self.X_test = self.X_test[:, :, :-1]
+
+    def download_data(self) -> None:
+        import kaggle
+
+        kaggle.api.authenticate()
+        kaggle.api.dataset_download_files(
+            "jacksoncrow/stock-market-dataset", path=self.data_dir, unzip=True
+        )
+
+    @property
+    def dataset_name(self) -> str:
+        return "nasdaq"
