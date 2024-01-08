@@ -10,7 +10,8 @@ from fdiff.dataloaders.datamodules import Datamodule
 
 def get_training_params(datamodule: Datamodule, trainer: pl.Trainer) -> dict[str, Any]:
     params = datamodule.dataset_parameters
-    params["num_training_steps"] *= trainer.max_epochs / trainer.accumulate_grad_batches
+    params["num_training_steps"] *= trainer.max_epochs
+    params["num_training_steps"] /= trainer.accumulate_grad_batches
     assert isinstance(params, dict)
     return params
 
