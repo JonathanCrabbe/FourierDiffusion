@@ -48,6 +48,8 @@ dependencies = [
   "hydra-core",
   "wandb",
   "POT",
+  "tables",
+  "einops",
 ]
 
 

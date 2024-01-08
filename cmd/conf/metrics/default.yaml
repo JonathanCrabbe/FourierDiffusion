@@ -5,7 +5,9 @@ metrics:
   - _target_: fdiff.sampling.metrics.SlicedWasserstein
     _partial_: true
     random_seed: ${random_seed}
-    num_directions: 10000
+    num_directions: 1000
+    save_all_distances: true
   - _target_: fdiff.sampling.metrics.MarginalWasserstein
     _partial_: true
     random_seed: ${random_seed}
+    save_all_distances: true

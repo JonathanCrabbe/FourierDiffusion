@@ -84,3 +84,40 @@ def idft(x: torch.Tensor) -> torch.Tensor:
     ), f"The inverse DFT and the input should have the same size. Got {x_time.size()} and {x.size()} instead."
 
     return x_time.detach()
+
+
+def spectral_density(x: torch.Tensor, apply_dft: bool = True) -> torch.Tensor:
+    """Compute the spectral density of the input time series.
+
+    Args:
+        x (torch.Tensor): Time series of shape (batch_size, max_len, n_channels).
+        apply_dft (bool, optional): Whether to apply the DFT to the input. Defaults to True.
+
+    Returns:
+        torch.Tensor: Spectral density of x with the size (batch_size, n_frequencies, n_channels).
+    """
+
+    max_len = x.size(1)
+    x = dft(x) if apply_dft else x
+
+    # Extract real and imaginary parts
+    n_real = math.ceil((max_len + 1) / 2)
+    x_re = x[:, :n_real, :]
+    x_im = x[:, n_real:, :]
+
+    # Create imaginary tensor
+    zero_padding = torch.zeros(size=(x.size(0), 1, x.size(2)))
+    x_im = torch.cat((zero_padding, x_im), dim=1)
+
+    # If number of time steps is even, put the null imaginary part
+    if max_len % 2 == 0:
+        x_im = torch.cat((x_im, zero_padding), dim=1)
+
+    assert (
+        x_im.size() == x_re.size()
+    ), f"The real and imaginary parts should have the same shape, got {x_re.size()} and {x_im.size()} instead."
+
+    # Compute the spectral density
+    x_dens = x_re**2 + x_im**2
+    assert isinstance(x_dens, torch.Tensor)
+    return x_dens

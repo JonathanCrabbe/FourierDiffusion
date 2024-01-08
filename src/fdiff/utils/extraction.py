@@ -91,5 +91,8 @@ def dict_to_str(dict: DictConfig | dict[str, Any]) -> str:
     dict_str = ""
     max_len = max([len(k) for k in dict])
     for k, v in dict.items():
+        # In case of long lists, just print the first 3 elements
+        if isinstance(v, list):
+            v = v[:3] + ["..."] if len(v) > 3 else v
         dict_str += f"\t {k: <{max_len + 5}} : \t  {v} \t \n"
     return dict_str
