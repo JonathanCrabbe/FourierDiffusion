@@ -3,5 +3,5 @@ data_dir: ${hydra:runtime.cwd}/data
 random_seed: ${random_seed}
 fourier_transform: ${fourier_transform}
 standardize: ${standardize}
-subdataset: "charge"
-batch_size: 32
+subdataset: charge
+batch_size: 16
