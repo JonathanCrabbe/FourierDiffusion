@@ -5,7 +5,7 @@ from typing import Any, Optional
 import numpy as np
 import torch
 
-from fdiff.utils.fourier import dft
+from fdiff.utils.fourier import dft, spectral_density
 from fdiff.utils.tensors import check_flat_array
 from fdiff.utils.wasserstein import WassersteinDistances
 
@@ -33,6 +33,7 @@ class MetricCollection:
         metrics: list[Metric],
         original_samples: Optional[np.ndarray | torch.Tensor] = None,
         include_baselines: bool = True,
+        include_specral_density: bool = False,
     ) -> None:
         metrics_time: list[Metric] = []
         metrics_freq: list[Metric] = []
@@ -52,6 +53,15 @@ class MetricCollection:
         self.metrics_time = metrics_time
         self.metrics_freq = metrics_freq
         self.include_baselines = include_baselines
+        self.metric_spectral = (
+            MarginalWasserstein(
+                original_samples=spectral_density(original_samples),
+                random_seed=42,
+                save_all_distances=True,
+            )
+            if include_specral_density
+            else None
+        )
 
     def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, Any]:
         metric_dict = {}
@@ -65,6 +75,15 @@ class MetricCollection:
             )
         if self.include_baselines:
             metric_dict.update(self.baseline_metrics)
+        if self.metric_spectral is not None:
+            metric_dict.update(
+                {
+                    f"spectral_{k}": v
+                    for k, v in self.metric_spectral(
+                        spectral_density(other_samples)
+                    ).items()
+                }
+            )
         return dict(sorted(metric_dict.items(), key=lambda item: item[0]))
 
     @property
