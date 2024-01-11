@@ -3,4 +3,4 @@ data_dir: ${hydra:runtime.cwd}/data
 random_seed: ${random_seed}
 fourier_transform: ${fourier_transform}
 standardize: ${standardize}
-batch_size: 16
+batch_size: 64

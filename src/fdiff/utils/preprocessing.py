@@ -262,7 +262,7 @@ def droughts_preprocess(
     data_dir: Path,
     random_seed: int,
     train_frac: float = 0.9,
-    start_date: str = "2010-01-01",
+    start_date: str = "2011-01-01",
     end_date: str = "2012-01-01",
 ) -> None:
     """Preprocess the US-Droughts dataset from the raw .csv file in data_dir.
@@ -287,8 +287,9 @@ def droughts_preprocess(
 
     # Create a tensor of shape (num_fips, num_days, num_features) from df
     df_pivot = df.pivot_table(index="fips", columns="date")
+    num_days = (end_time - start_time).days
     X = torch.tensor(df_pivot.values, dtype=torch.float32)
-    X = rearrange(X, "fips (feature day) -> fips day feature", day=730)
+    X = rearrange(X, "fips (feature day) -> fips day feature", day=num_days)
 
     # Train-test split
     torch.manual_seed(random_seed)

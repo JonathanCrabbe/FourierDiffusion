@@ -424,13 +424,19 @@ class USDroughtsDatamodule(Datamodule):
             )
 
         # Load preprocessed tensors
-        self.X_train = torch.load(self.data_dir / "X_train.pt")
-        self.X_test = torch.load(self.data_dir / "X_test.pt")
+        self.X_train: torch.Tensor = torch.load(self.data_dir / "X_train.pt")
+        self.X_test: torch.Tensor = torch.load(self.data_dir / "X_test.pt")
 
+        # Remove features that have high correlation with T2M
+        feats = [i for i in range(self.X_train.shape[2]) if i not in {4, 5, 6, 7, 9}]
+        self.X_train = self.X_train[:, :, feats]
+        self.X_test = self.X_test[:, :, feats]
+
+        # Check tensors
         assert isinstance(self.X_train, torch.Tensor)
         assert isinstance(self.X_test, torch.Tensor)
-        assert self.X_train.shape[2] == self.X_test.shape[2] == 18
         assert self.X_train.shape[1] % 365 == self.X_test.shape[1] % 365 == 0
+        assert self.X_train.shape[2] == self.X_test.shape[2] == len(feats)
 
     def download_data(self) -> None:
         import kaggle
