@@ -263,7 +263,7 @@ def nasa_preprocess(
     subdataset: str = "charge",
     train_frac: float = 0.9,
     random_seed: int = 42,
-):
+) -> None:
     if subdataset == "charge":
         features = [
             "Voltage_measured",
@@ -348,3 +348,48 @@ def nasa_preprocess(
     # Save the preprocessed tensors.
     for X, name in zip([X_train, X_test], ["train", "test"]):
         torch.save(X, data_dir / subdataset / f"X_{name}.pt")
+
+
+def droughts_preprocess(
+    data_dir: Path,
+    random_seed: int,
+    train_frac: float = 0.9,
+    start_date: str = "2011-01-01",
+    end_date: str = "2012-01-01",
+) -> None:
+    """Preprocess the US-Droughts dataset from the raw .csv file in data_dir.
+    Saves the preprocessed data as .pt files in the same directory.
+
+    Args:
+        data_dir (Path): Path in which the raw financial data is stored.
+    """
+
+    df = pd.read_csv(data_dir / "train_timeseries/train_timeseries.csv")
+
+    # Convert date column to datetime
+    df["date"] = pd.to_datetime(df["date"])
+
+    # Remove entries that are not in the inderval
+    start_time = pd.to_datetime(start_date)
+    end_time = pd.to_datetime(end_date)
+    df = df[(df["date"] >= start_time) & (df["date"] < end_time)]
+
+    # Drop columns with missing values
+    df = df.dropna(axis=1)
+
+    # Create a tensor of shape (num_fips, num_days, num_features) from df
+    df_pivot = df.pivot_table(index="fips", columns="date")
+    num_days = (end_time - start_time).days
+    X = torch.tensor(df_pivot.values, dtype=torch.float32)
+    X = rearrange(X, "fips (feature day) -> fips day feature", day=num_days)
+
+    # Train-test split
+    torch.manual_seed(random_seed)
+    num_train = int(train_frac * len(X))
+    perm_idx = torch.randperm(len(X))
+    train_fips, test_fips = perm_idx[:num_train], perm_idx[num_train:]
+    X_train, X_test = X[train_fips], X[test_fips]
+
+    # Save the preprocessed tensors.
+    for X, name in zip([X_train, X_test], ["train", "test"]):
+        torch.save(X, data_dir / f"X_{name}.pt")
