@@ -258,6 +258,98 @@ def nasdaq_preprocess(
         torch.save(X, data_dir / f"X_{name}.pt")
 
 
+def nasa_preprocess(
+    data_dir: Path,
+    subdataset: str = "charge",
+    train_frac: float = 0.9,
+    random_seed: int = 42,
+) -> None:
+    if subdataset == "charge":
+        features = [
+            "Voltage_measured",
+            "Current_measured",
+            "Temperature_measured",
+            "Current_charge",
+            "Voltage_charge",
+        ]
+        sub_dataset = "charge"
+        interval_bin = 10
+        cutoff_time = 5000 - 5000 % interval_bin
+    elif subdataset == "discharge":
+        features = [
+            "Voltage_measured",
+            "Current_measured",
+            "Temperature_measured",
+            "Current_load",
+            "Voltage_load",
+        ]
+        sub_dataset = "discharge"
+        interval_bin = 15
+        cutoff_time = 2000 - 2000 % interval_bin
+
+    else:
+        raise ValueError(f"Unknown subdataset {subdataset}")
+
+    # Read the metadata
+    metadata = pd.read_csv(data_dir / "cleaned_dataset" / "metadata.csv")
+    files = metadata[metadata["type"] == f"{sub_dataset}"]["filename"].values
+
+    full_df = pd.DataFrame()
+
+    for filename in tqdm(files):
+        data = pd.read_csv(data_dir / "cleaned_dataset" / "data" / filename)
+
+        # check if the maximum time is greater than the cutoff time
+        if data["Time"].max() > cutoff_time:
+            # Check that the maximum interval is less than the bin size
+            interval = data["Time"].diff().max()
+            if interval > interval_bin:
+                continue
+
+            # Remove the rows such that the time is greater than the cutoff time
+            data = data[data["Time"] < cutoff_time]
+
+            # bin the data
+
+            data["Time_Bin"] = pd.cut(
+                data["Time"],
+                bins=range(
+                    -interval_bin, int(cutoff_time + interval_bin), interval_bin
+                ),
+            )
+
+            # Group by custom bins and calculate the mean for each group
+            result_df = data.groupby("Time_Bin", observed=False).mean().reset_index()
+            result_df["Time_Bin"] = result_df.index
+
+            result_df["filename"] = filename
+            full_df = pd.concat([full_df, result_df])
+
+    df_pivot = full_df.pivot(index="filename", columns="Time_Bin", values=features)
+
+    num_timesteps = cutoff_time // interval_bin + 1
+    X_full = torch.tensor(df_pivot.values, dtype=torch.float32)
+    # Rearange to get a 3D tensor of shape (num_samples, num_timesteps, num_features)
+    X_reshaped = X_full.reshape(X_full.shape[0], -1, num_timesteps)
+    # Permute the last two dimensions
+    X = X_reshaped.permute(0, 2, 1)
+
+    # Train-test split
+    torch.manual_seed(random_seed)
+    num_train = int(train_frac * len(X))
+    perm_idx = torch.randperm(len(X))
+    train_stocks, test_stocks = perm_idx[:num_train], perm_idx[num_train:]
+    X_train, X_test = X[train_stocks], X[test_stocks]
+
+    # create the directory if it does not exist
+    folder = data_dir / subdataset
+    folder.mkdir(parents=True, exist_ok=True)
+
+    # Save the preprocessed tensors.
+    for X, name in zip([X_train, X_test], ["train", "test"]):
+        torch.save(X, data_dir / subdataset / f"X_{name}.pt")
+
+
 def droughts_preprocess(
     data_dir: Path,
     random_seed: int,
