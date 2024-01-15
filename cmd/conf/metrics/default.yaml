@@ -1,7 +1,7 @@
 _target_: fdiff.sampling.metrics.MetricCollection
 _partial_: true
 include_baselines: true
-include_specral_density: true
+include_spectral_density: true
 metrics:
   - _target_: fdiff.sampling.metrics.SlicedWasserstein
     _partial_: true

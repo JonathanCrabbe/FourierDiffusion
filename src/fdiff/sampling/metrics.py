@@ -33,7 +33,7 @@ class MetricCollection:
         metrics: list[Metric],
         original_samples: Optional[np.ndarray | torch.Tensor] = None,
         include_baselines: bool = True,
-        include_specral_density: bool = False,
+        include_spectral_density: bool = False,
     ) -> None:
         metrics_time: list[Metric] = []
         metrics_freq: list[Metric] = []
@@ -59,7 +59,7 @@ class MetricCollection:
                 random_seed=42,
                 save_all_distances=True,
             )
-            if include_specral_density
+            if include_spectral_density
             else None
         )
 
