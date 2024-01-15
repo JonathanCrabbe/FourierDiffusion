@@ -400,8 +400,11 @@ class NASADatamodule(Datamodule):
         fourier_transform: bool = False,
         standardize: bool = False,
         subdataset: str = "charge",
+        remove_outlier_feature: bool = True,
     ) -> None:
         self.subdataset = subdataset
+        self.remove_outlier_feature = remove_outlier_feature
+
         super().__init__(
             data_dir=data_dir,
             random_seed=random_seed,
@@ -432,6 +435,14 @@ class NASADatamodule(Datamodule):
         self.X_train = torch.load(self.data_dir / self.subdataset / "X_train.pt")
         self.X_test = torch.load(self.data_dir / self.subdataset / "X_test.pt")
 
+        if self.remove_outlier_feature and self.subdataset == "charge":
+            # Remove the third feature which has a bad range
+            self.X_train = self.X_train[:, ::2, [0, 1, 3, 4]]
+            self.X_test = self.X_test[:, ::2, [0, 1, 3, 4]]
+
+            assert self.X_train.shape[2] == self.X_test.shape[2] == 4
+            assert self.X_train.shape[1] == 251
+            assert self.X_test.shape[1] == 251
         assert isinstance(self.X_train, torch.Tensor)
         assert isinstance(self.X_test, torch.Tensor)
 
