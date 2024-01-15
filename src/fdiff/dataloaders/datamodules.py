@@ -12,7 +12,11 @@ from torch.utils.data import DataLoader, Dataset
 
 from fdiff.utils.dataclasses import collate_batch
 from fdiff.utils.fourier import dft
-from fdiff.utils.preprocessing import mimic_preprocess, nasdaq_preprocess
+from fdiff.utils.preprocessing import (
+    mimic_preprocess,
+    nasdaq_preprocess,
+    nasa_preprocess,
+)
 
 
 class DiffusionDataset(Dataset):
@@ -385,3 +389,71 @@ class NASDAQDatamodule(Datamodule):
     @property
     def dataset_name(self) -> str:
         return "nasdaq"
+
+
+class NASADatamodule(Datamodule):
+    def __init__(
+        self,
+        data_dir: Path | str = Path.cwd() / "data",
+        random_seed: int = 42,
+        batch_size: int = 32,
+        fourier_transform: bool = False,
+        standardize: bool = False,
+        subdataset: str = "charge",
+        remove_outlier_feature: bool = True,
+    ) -> None:
+        self.subdataset = subdataset
+        self.remove_outlier_feature = remove_outlier_feature
+
+        super().__init__(
+            data_dir=data_dir,
+            random_seed=random_seed,
+            batch_size=batch_size,
+            fourier_transform=fourier_transform,
+            standardize=standardize,
+        )
+
+    def setup(self, stage: str = "fit") -> None:
+        if (
+            not (self.data_dir / self.subdataset / "X_train.pt").exists()
+            or not (self.data_dir / self.subdataset / "X_test.pt").exists()
+        ):
+            logging.info(
+                f"Preprocessed tensors for {self.dataset_name}_{self.subdataset} not found. "
+                f"Now running the preprocessing pipeline."
+            )
+            nasa_preprocess(
+                data_dir=self.data_dir,
+                subdataset=self.subdataset,
+                random_seed=self.random_seed,
+            )
+            logging.info(
+                f"Preprocessing pipeline finished, tensors saved in {self.data_dir}."
+            )
+
+        # Load preprocessed tensors
+        self.X_train = torch.load(self.data_dir / self.subdataset / "X_train.pt")
+        self.X_test = torch.load(self.data_dir / self.subdataset / "X_test.pt")
+
+        if self.remove_outlier_feature and self.subdataset == "charge":
+            # Remove the third feature which has a bad range
+            self.X_train = self.X_train[:, ::2, [0, 1, 3, 4]]
+            self.X_test = self.X_test[:, ::2, [0, 1, 3, 4]]
+
+            assert self.X_train.shape[2] == self.X_test.shape[2] == 4
+            assert self.X_train.shape[1] == 251
+            assert self.X_test.shape[1] == 251
+        assert isinstance(self.X_train, torch.Tensor)
+        assert isinstance(self.X_test, torch.Tensor)
+
+    def download_data(self) -> None:
+        import kaggle
+
+        kaggle.api.authenticate()
+        kaggle.api.dataset_download_files(
+            "patrickfleith/nasa-battery-dataset", path=self.data_dir, unzip=True
+        )
+
+    @property
+    def dataset_name(self) -> str:
+        return "nasa"
