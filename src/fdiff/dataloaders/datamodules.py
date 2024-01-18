@@ -282,7 +282,7 @@ class MIMICIIIDatamodule(Datamodule):
         batch_size: int = 32,
         fourier_transform: bool = False,
         standardize: bool = False,
-        n_feats: int = 104,
+        n_feats: int = 40,
     ) -> None:
         super().__init__(
             data_dir=data_dir,
