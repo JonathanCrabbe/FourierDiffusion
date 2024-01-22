@@ -1,6 +1,7 @@
 import math
 
 import torch
+from einops import rearrange
 from torch.fft import irfft, rfft
 
 
@@ -121,3 +122,54 @@ def spectral_density(x: torch.Tensor, apply_dft: bool = True) -> torch.Tensor:
     x_dens = x_re**2 + x_im**2
     assert isinstance(x_dens, torch.Tensor)
     return x_dens
+
+
+def localization_metrics(X: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Computes the localization metrics for the input time series.
+
+    Args:
+        X (torch.Tensor): Input time series of shape (batch_size, max_len, n_channels).
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor]: Delocalization in the time domain and in the frequency domain for each sample
+    """
+
+    max_len = X.shape[1]
+
+    # Compute the energy distribution over time for the time series
+    X_energy = torch.sum(X**2, dim=2, keepdim=True) / torch.sum(
+        X**2, dim=(1, 2), keepdim=True
+    )
+    X_energy = rearrange(X_energy, "batch time 1 -> batch time")
+
+    # Compute the energy distribution over frequency for the time series
+    X_spec = spectral_density(X)
+    X_spec_mirror = (
+        torch.flip(X_spec[:, 1:, :], dims=(1,))
+        if max_len % 2 != 0
+        else torch.flip(X_spec[:, 1:-1, :], dims=(1,))
+    )  # Add the mirrored frequencies beyond the Nyquist frequency
+    X_spec = torch.cat((X_spec, X_spec_mirror), dim=1)
+    X_spec = torch.sum(X_spec, dim=2, keepdim=True) / torch.sum(
+        X_spec, dim=(1, 2), keepdim=True
+    )
+    X_spec = rearrange(X_spec, "batch freq 1 -> batch freq")
+    assert (
+        X_spec.shape[1] == max_len
+    ), f"Spectral density has incorrect shape at dimension 1, expected {max_len}, got {X_spec.shape[1]} instead."
+
+    # Compute the cyclic distance between each time steps
+    t = torch.arange(max_len, dtype=torch.float)
+    t1 = rearrange(t, "time -> time 1 ")
+    t2 = rearrange(t, "time -> 1 time ")
+    cyclic_distance = torch.min(torch.abs(t1 - t2), max_len - torch.abs(t1 - t2))
+
+    # Compute the delocalization of the signal in time domain
+    X_loc = torch.einsum("bt, ts -> bs", X_energy, cyclic_distance**2)
+    X_loc = torch.min(X_loc, dim=1)[0]
+
+    # Compute the delocalization of the signal in frequency domain
+    X_spec_loc = torch.einsum("bt, ts -> bs", X_spec, cyclic_distance**2)
+    X_spec_loc = torch.min(X_spec_loc, dim=1)[0]
+
+    return X_loc, X_spec_loc
