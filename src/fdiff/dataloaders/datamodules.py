@@ -221,7 +221,8 @@ class ECGDatamodule(Datamodule):
         # In case of frequency convolution, we convolve the frequency domain with a Gaussian kernel
         if self.smooth_frequency:
             self.X_train = smooth_frequency(self.X_train, sigma=self.smoother_width)
-            logging.info("Smoothing the frequency domain of the training set.")
+            self.X_test = smooth_frequency(self.X_test, sigma=self.smoother_width)
+            logging.info("Smoothing the frequency domain of the data.")
             X_loc, X_spec_loc = localization_metrics(self.X_train)
             logging.info(f"New time delocalization: {X_loc.mean().item():.3g}")
             logging.info(
