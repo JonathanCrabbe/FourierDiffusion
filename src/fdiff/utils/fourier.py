@@ -173,3 +173,37 @@ def localization_metrics(X: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     X_spec_loc = torch.min(X_spec_loc, dim=1)[0]
 
     return X_loc, X_spec_loc
+
+
+def smooth_frequency(X: torch.Tensor, sigma: float) -> torch.Tensor:
+    """Smooths the signal in the frequency domain by convolving it with a Gaussian kernel.
+
+    Args:
+        X (torch.Tensor): Time series to smooth of shape (batch_size, max_len, n_channels).
+        sigma (float): Gaussian kernel width.
+
+    Returns:
+        torch.Tensor: Smoothed signal in the frequency domain of shape (batch_size, max_len, n_channels).
+    """
+
+    # Compute Nyquist frequency
+    max_len = X.shape[1]
+    nyquist_freq = max_len / 2
+
+    # Define Gaussian kernel for each frequency pair
+    k = torch.cat(
+        (
+            torch.arange(0, nyquist_freq, dtype=torch.float32),
+            torch.arange(1, nyquist_freq, dtype=torch.float32),
+        )
+    )
+    k1 = rearrange(k, "time -> time 1 ")
+    k2 = rearrange(k, "time -> 1 time ")
+    gaussian_kernel = torch.exp(-(((k1 - k2) / (sigma)) ** 2) / 2)
+    gaussian_kernel = gaussian_kernel / torch.sum(gaussian_kernel, dim=0, keepdim=True)
+
+    # Convolve X with the Gaussian kernel in the frequency domain
+    X = dft(X)
+    X = torch.einsum("btc, ts -> bsc", X, gaussian_kernel)
+    X = idft(X)
+    return X
