@@ -6,3 +6,4 @@ standardize: ${standardize}
 batch_size: 64
 subsample_localization: false
 smooth_frequency: false
+smoother_width: 0.0

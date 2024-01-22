@@ -172,6 +172,7 @@ class ECGDatamodule(Datamodule):
         standardize: bool = False,
         subsample_localization: bool = False,
         smooth_frequency: bool = False,
+        smoother_width: float = 0.0,
     ) -> None:
         super().__init__(
             data_dir=data_dir,
@@ -182,6 +183,7 @@ class ECGDatamodule(Datamodule):
         )
         self.subsample_localization = subsample_localization
         self.smooth_frequency = smooth_frequency
+        self.smoother_width = smoother_width
 
     def setup(self, stage: str = "fit") -> None:
         # Read CSV; extract features and labels
@@ -218,7 +220,7 @@ class ECGDatamodule(Datamodule):
 
         # In case of frequency convolution, we convolve the frequency domain with a Gaussian kernel
         if self.smooth_frequency:
-            self.X_train = smooth_frequency(self.X_train, sigma=10)
+            self.X_train = smooth_frequency(self.X_train, sigma=self.smoother_width)
             logging.info("Smoothing the frequency domain of the training set.")
             X_loc, X_spec_loc = localization_metrics(self.X_train)
             logging.info(f"New time delocalization: {X_loc.mean().item():.3g}")
