@@ -6,7 +6,9 @@ import torch.nn as nn
 import torch.optim as optim
 from diffusers import DDPMScheduler
 from diffusers.optimization import get_cosine_schedule_with_warmup
+from einops import rearrange
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
+from torchvision.ops import MLP
 
 from fdiff.models.transformer import (
     GaussianFourierProjection,
@@ -179,3 +181,78 @@ class ScoreModule(pl.LightningModule):
             raise NotImplementedError(
                 f"Scheduler {self.noise_scheduler} not implemented yet, cannot set time encoder."
             )
+
+
+class MLPScoreModule(ScoreModule):
+    def __init__(
+        self,
+        n_channels: int,
+        max_len: int,
+        noise_scheduler: DDPMScheduler | SDE,
+        fourier_noise_scaling: bool = True,
+        d_model: int = 60,
+        num_layers: int = 3,
+        num_training_steps: int = 1000,
+        lr_max: float = 1e-3,
+        likelihood_weighting: bool = False,
+    ) -> None:
+        super().__init__(
+            n_channels=n_channels,
+            max_len=max_len,
+            noise_scheduler=noise_scheduler,
+            fourier_noise_scaling=fourier_noise_scaling,
+            d_model=d_model,
+            num_layers=num_layers,
+            n_head=1,
+            num_training_steps=num_training_steps,
+            lr_max=lr_max,
+            likelihood_weighting=likelihood_weighting,
+        )
+
+        # Change the components that should be different in our score model
+        self.embedder = nn.Linear(
+            in_features=max_len * n_channels, out_features=d_model
+        )
+        self.unembedder = nn.Linear(
+            in_features=d_model, out_features=max_len * n_channels
+        )
+        self.backbone = MLP(
+            in_channels=d_model,
+            hidden_channels=[d_model] * num_layers,
+        )
+        self.pos_encoder = None
+
+        # Save all hyperparameters for checkpointing
+        self.save_hyperparameters()
+
+    def forward(self, batch: DiffusableBatch) -> torch.Tensor:
+        X = batch.X
+        assert X.size()[1:] == (
+            self.max_len,
+            self.n_channels,
+        ), f"X has wrong shape, should be {(X.size(0), self.max_len, self.n_channels)}, but is {X.size()}"
+
+        timesteps = batch.timesteps
+        assert timesteps is not None and timesteps.size(0) == len(batch)
+
+        # Flatten the tensor
+        X = rearrange(X, "b t c -> b (t c)")
+
+        # Channel embedding
+        X = self.embedder(X)
+
+        # Add time encoding
+        X = self.time_encoder(X, timesteps, use_time_axis=False)
+
+        # Backbone
+        X = self.backbone(X)
+
+        # Channel unembedding
+        X = self.unembedder(X)
+
+        # Unflatten the tensor
+        X = rearrange(X, "b (t c) -> b t c", t=self.max_len, c=self.n_channels)
+
+        assert isinstance(X, torch.Tensor)
+
+        return X

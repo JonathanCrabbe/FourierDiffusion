@@ -30,15 +30,18 @@ class PositionalEncoding(nn.Module):
 
 
 class TimeEncoding(nn.Module):
-    def __init__(self, d_model: int, max_time: int):
+    def __init__(self, d_model: int, max_time: int, use_time_axis: bool = True):
         super().__init__()
 
         # Learnable Embedding matrix to map time steps to embeddings
         self.embedding = nn.Embedding(
             num_embeddings=max_time, embedding_dim=d_model, max_norm=math.sqrt(d_model)
         )  # (max_time, d_emb)
+        self.use_time_axis = use_time_axis
 
-    def forward(self, x: torch.Tensor, timesteps: torch.LongTensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, timesteps: torch.LongTensor, use_time_axis: bool = True
+    ) -> torch.Tensor:
         """Adds a time encoding to the tensor x.
 
         Args:
@@ -48,8 +51,9 @@ class TimeEncoding(nn.Module):
         Returns:
             torch.Tensor: Tensor with an additional time encoding
         """
-        t_emb = self.embedding(timesteps)  # (batch_size, d_emb)
-        t_emb = t_emb.unsqueeze(1)  # (batch_size, 1, d_emb)
+        t_emb = self.embedding(timesteps)  # (batch_size, d_model)
+        if use_time_axis:
+            t_emb = t_emb.unsqueeze(1)  # (batch_size, 1, d_model)
         assert isinstance(t_emb, torch.Tensor)
         return x + t_emb
 
@@ -70,14 +74,17 @@ class GaussianFourierProjection(nn.Module):
 
         self.dense = nn.Linear(d_model, d_model)
 
-    def forward(self, x: torch.Tensor, timesteps: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, timesteps: torch.Tensor, use_time_axis: bool = True
+    ) -> torch.Tensor:
         time_proj = timesteps[:, None] * self.W[None, :] * 2 * np.pi
         embeddings = torch.cat([torch.sin(time_proj), torch.cos(time_proj)], dim=-1)
 
         # Slice to get exactly d_model
         t_emb = embeddings[:, : self.d_model]  # (batch_size, d_model)
 
-        t_emb = t_emb.unsqueeze(1)
+        if use_time_axis:
+            t_emb = t_emb.unsqueeze(1)
 
         projected_emb: torch.Tensor = self.dense(t_emb)
 

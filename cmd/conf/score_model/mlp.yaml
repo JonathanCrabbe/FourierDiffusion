@@ -1,0 +1,10 @@
+_target_: fdiff.models.score_models.MLPScoreModule
+_partial_: true
+d_model: 512
+num_layers: 10
+lr_max: 1.0e-3
+fourier_noise_scaling: ${fourier_transform}
+likelihood_weighting: False
+
+defaults:
+  - noise_scheduler: vpsde
