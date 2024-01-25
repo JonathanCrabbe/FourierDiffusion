@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 import torch
 from diffusers import DDPMScheduler
 
-from fdiff.models.score_models import MLPScoreModule, ScoreModule
+from fdiff.models.score_models import LSTMScoreModule, MLPScoreModule, ScoreModule
 from fdiff.utils.dataclasses import DiffusableBatch
 
 from .test_datamodules import DummyDatamodule
@@ -41,6 +41,16 @@ def instantiate_score_model(backbone_type: str) -> ScoreModule:
                 num_layers=num_layers,
                 num_training_steps=10,
             )
+        case "lstm":
+            score_model = LSTMScoreModule(
+                n_channels=n_chanels,
+                max_len=max_len,
+                noise_scheduler=noise_scheduler,
+                d_model=d_model,
+                num_layers=num_layers,
+                num_training_steps=10,
+            )
+
         case _:
             raise ValueError(f"Backbone type {backbone_type} not supported.")
     return score_model
@@ -50,7 +60,7 @@ def instantiate_trainer() -> pl.Trainer:
     return pl.Trainer(max_epochs=1, accelerator="cpu")
 
 
-@pytest.mark.parametrize("backbone_type", ["transformer", "mlp"])
+@pytest.mark.parametrize("backbone_type", ["transformer", "mlp", "lstm"])
 def test_score_module(backbone_type: str) -> None:
     torch.manual_seed(42)
     score_model = instantiate_score_model(backbone_type=backbone_type)
