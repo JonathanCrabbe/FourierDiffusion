@@ -11,7 +11,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from fdiff.utils.dataclasses import collate_batch
-from fdiff.utils.fourier import dft
+from fdiff.utils.fourier import dft, localization_metrics, smooth_frequency
 from fdiff.utils.preprocessing import (
     droughts_preprocess,
     mimic_preprocess,
@@ -170,6 +170,9 @@ class ECGDatamodule(Datamodule):
         batch_size: int = 32,
         fourier_transform: bool = False,
         standardize: bool = False,
+        subsample_localization: bool = False,
+        smooth_frequency: bool = False,
+        smoother_width: float = 0.0,
     ) -> None:
         super().__init__(
             data_dir=data_dir,
@@ -178,6 +181,9 @@ class ECGDatamodule(Datamodule):
             fourier_transform=fourier_transform,
             standardize=standardize,
         )
+        self.subsample_localization = subsample_localization
+        self.smooth_frequency = smooth_frequency
+        self.smoother_width = smoother_width
 
     def setup(self, stage: str = "fit") -> None:
         # Read CSV; extract features and labels
@@ -197,6 +203,31 @@ class ECGDatamodule(Datamodule):
         self.y_train = torch.tensor(y_train, dtype=torch.long)
         self.X_test = torch.tensor(X_test, dtype=torch.float32).unsqueeze(2)
         self.y_test = torch.tensor(y_test, dtype=torch.long)
+
+        # In case of subsampling, we only keep the time series that are most localized in time
+        if self.subsample_localization:
+            X_loc, X_spec_loc = localization_metrics(self.X_train)
+            loc_score = X_loc / X_spec_loc
+            idx_ranking = torch.argsort(loc_score, descending=False)
+            self.X_train = self.X_train[idx_ranking[:1000]]
+            self.y_train = self.y_train[idx_ranking[:1000]]
+            X_loc, X_spec_loc = localization_metrics(self.X_train)
+            logging.info("Subsampling the training set based on localization metrics.")
+            logging.info(f"New time delocalization: {X_loc.mean().item():.3g}")
+            logging.info(
+                f"New frequency delocalization: {X_spec_loc.mean().item():.3g}"
+            )
+
+        # In case of frequency convolution, we convolve the frequency domain with a Gaussian kernel
+        if self.smooth_frequency and self.smoother_width > 0.0:
+            self.X_train = smooth_frequency(self.X_train, sigma=self.smoother_width)
+            self.X_test = smooth_frequency(self.X_test, sigma=self.smoother_width)
+            logging.info("Smoothing the frequency domain of the data.")
+            X_loc, X_spec_loc = localization_metrics(self.X_train)
+            logging.info(f"New time delocalization: {X_loc.mean().item():.3g}")
+            logging.info(
+                f"New frequency delocalization: {X_spec_loc.mean().item():.3g}"
+            )
 
     def download_data(self) -> None:
         import kaggle
@@ -282,7 +313,7 @@ class MIMICIIIDatamodule(Datamodule):
         batch_size: int = 32,
         fourier_transform: bool = False,
         standardize: bool = False,
-        n_feats: int = 104,
+        n_feats: int = 40,
     ) -> None:
         super().__init__(
             data_dir=data_dir,
