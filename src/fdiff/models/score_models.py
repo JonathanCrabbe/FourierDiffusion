@@ -190,7 +190,8 @@ class MLPScoreModule(ScoreModule):
         max_len: int,
         noise_scheduler: DDPMScheduler | SDE,
         fourier_noise_scaling: bool = True,
-        d_model: int = 60,
+        d_model: int = 72,
+        d_mlp: int = 512,
         num_layers: int = 3,
         num_training_steps: int = 1000,
         lr_max: float = 1e-3,
@@ -216,9 +217,12 @@ class MLPScoreModule(ScoreModule):
         self.unembedder = nn.Linear(
             in_features=d_model, out_features=max_len * n_channels
         )
-        self.backbone = MLP(
-            in_channels=d_model,
-            hidden_channels=[d_model] * num_layers,
+
+        self.backbone = nn.ModuleList(
+            [
+                MLP(in_channels=d_model, hidden_channels=[d_mlp, d_model], dropout=0.1)
+                for _ in range(num_layers)
+            ]
         )
         self.pos_encoder = None
 
@@ -245,7 +249,8 @@ class MLPScoreModule(ScoreModule):
         X = self.time_encoder(X, timesteps, use_time_axis=False)
 
         # Backbone
-        X = self.backbone(X)
+        for layer in self.backbone:
+            X = X + layer(X)
 
         # Channel unembedding
         X = self.unembedder(X)
