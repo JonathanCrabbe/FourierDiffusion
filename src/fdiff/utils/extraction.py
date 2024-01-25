@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 from omegaconf import DictConfig, OmegaConf
 
 from fdiff.dataloaders.datamodules import Datamodule
-from fdiff.models.score_models import MLPScoreModule, ScoreModule
+from fdiff.models.score_models import LSTMScoreModule, MLPScoreModule, ScoreModule
 
 
 def get_training_params(datamodule: Datamodule, trainer: pl.Trainer) -> dict[str, Any]:
@@ -70,6 +70,8 @@ def get_model_typle(cfg: DictConfig | dict) -> ScoreModule | MLPScoreModule:
             return ScoreModule
         case "fdiff.models.score_models.MLPScoreModule":
             return MLPScoreModule
+        case "fdiff.models.score_models.LSTMScoreModule":
+            return LSTMScoreModule
         case _:
             raise NotImplementedError(f"Model class {model_class} not implemented yet.")
 
