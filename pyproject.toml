@@ -50,6 +50,7 @@ dependencies = [
   "POT",
   "tables",
   "einops",
+  "SciencePlots",
 ]
 
 
