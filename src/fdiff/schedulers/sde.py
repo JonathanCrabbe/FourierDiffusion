@@ -1,4 +1,5 @@
 """Abstract SDE classes, Reverse SDE, and VE/VP SDEs. Adapted from https://github.com/yang-song/score_sde."""
+
 import abc
 import math
 from collections import namedtuple
@@ -36,8 +37,7 @@ class SDE(abc.ABC):
     @abc.abstractmethod
     def step(
         self, model_output: torch.Tensor, timestep: float, sample: torch.Tensor
-    ) -> SamplingOutput:
-        ...
+    ) -> SamplingOutput: ...
 
     def set_noise_scaling(self, max_len: int) -> None:
         """Finish the initialization of the scheduler by setting G (scaling diagonal)

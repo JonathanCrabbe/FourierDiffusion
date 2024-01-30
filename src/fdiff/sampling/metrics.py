@@ -15,12 +15,10 @@ class Metric(ABC):
         self.original_samples = check_flat_array(original_samples)
 
     @abstractmethod
-    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, Any]:
-        ...
+    def __call__(self, other_samples: np.ndarray | torch.Tensor) -> dict[str, Any]: ...
 
     @abstractproperty
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
     def baseline_metrics(self) -> dict[str, float]:

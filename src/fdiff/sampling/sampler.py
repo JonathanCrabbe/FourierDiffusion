@@ -97,9 +97,9 @@ class DiffusionSampler:
                     timesteps = torch.full(
                         (batch_size,),
                         t,
-                        dtype=torch.long
-                        if isinstance(t.item(), int)
-                        else torch.float32,
+                        dtype=(
+                            torch.long if isinstance(t.item(), int) else torch.float32
+                        ),
                         device=self.score_model.device,
                         requires_grad=False,
                     )

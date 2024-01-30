@@ -140,8 +140,7 @@ class Datamodule(pl.LightningDataModule, ABC):
         )
 
     @abstractproperty
-    def dataset_name(self) -> str:
-        ...
+    def dataset_name(self) -> str: ...
 
     @property
     def dataset_parameters(self) -> dict[str, Any]:
