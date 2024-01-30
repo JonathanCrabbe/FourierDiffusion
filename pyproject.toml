@@ -59,7 +59,7 @@ test = [
   "pytest",
   "coverage",
   "mypy",
-  "black <= 23.3",
+  "black",
   "pytest-cov",
   "pytest-mypy",
   "pytest-black",
