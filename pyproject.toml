@@ -14,12 +14,11 @@ license = {file = "LICENSE"}
 keywords = ["diffusion", "time", "series", "fourier", "frequency", "generative", "machine", "learning", "ai"]
 
 authors = [
-  {name = "Jonathan Crabbé", email = "jonathan.cr1302@gmail.com" },
-  {name = "Nicolas Huynh", email = "nicolas.huynh99@gmail.com" }
+  {name = "Anonymous Author"},
 ]
 
 maintainers = [
-  {name = "Jonathan Crabbé", email = "jonathan.cr1302@gmail.com" }
+  {name = "Anonymous Author"}
 ]
 
 classifiers = [
@@ -67,10 +66,6 @@ test = [
   "pytest-flakes",
   "pre-commit",
 ]
-
-[project.urls]
-"Homepage" = "https://github.com/JonathanCrabbe/FourierDiffusion/"
-"Source" = "https://github.com/JonathanCrabbe/FourierDiffusion/"
 
 [build-system]
 # These are the assumed default build requirements from pip:
