@@ -46,8 +46,7 @@ class DummyDatamodule(Datamodule):
         self.X_test = torch.randn_like(self.X_train)
         self.y_test = torch.randint_like(self.y_train, low=low, high=high)
 
-    def download_data(self) -> None:
-        ...
+    def download_data(self) -> None: ...
 
     @property
     def dataset_name(self) -> str:

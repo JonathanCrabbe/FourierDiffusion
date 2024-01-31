@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 from omegaconf import DictConfig, OmegaConf
 
 from fdiff.dataloaders.datamodules import Datamodule
+from fdiff.models.score_models import LSTMScoreModule, MLPScoreModule, ScoreModule
 
 
 def get_training_params(datamodule: Datamodule, trainer: pl.Trainer) -> dict[str, Any]:
@@ -52,6 +53,27 @@ def flatten_config(cfg: DictConfig | dict) -> dict[str, Any]:
         elif k not in {"_target_", "_partial_"}:
             cfg_flat[k] = v  # type: ignore
     return cfg_flat
+
+
+def get_model_type(cfg: DictConfig | dict) -> ScoreModule | MLPScoreModule:
+    """Get the model type from a config.
+
+    Args:
+        cfg (DictConfig | dict): Config to get the model type from.
+
+    Returns:
+        ScoreModule | MLPScoreModule: The model type.
+    """
+    model_class = cfg["score_model"]["_target_"]
+    match model_class:
+        case "fdiff.models.score_models.ScoreModule":
+            return ScoreModule
+        case "fdiff.models.score_models.MLPScoreModule":
+            return MLPScoreModule
+        case "fdiff.models.score_models.LSTMScoreModule":
+            return LSTMScoreModule
+        case _:
+            raise NotImplementedError(f"Model class {model_class} not implemented yet.")
 
 
 def get_best_checkpoint(checkpoint_path: Path) -> Path:

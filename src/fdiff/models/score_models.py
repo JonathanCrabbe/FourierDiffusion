@@ -4,9 +4,10 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from diffusers import DDPMScheduler
 from diffusers.optimization import get_cosine_schedule_with_warmup
+from einops import rearrange
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
+from torchvision.ops import MLP
 
 from fdiff.models.transformer import (
     GaussianFourierProjection,
@@ -15,7 +16,7 @@ from fdiff.models.transformer import (
 )
 from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
-from fdiff.utils.losses import get_ddpm_loss, get_sde_loss_fn
+from fdiff.utils.losses import get_sde_loss_fn
 
 
 class ScoreModule(pl.LightningModule):
@@ -23,7 +24,7 @@ class ScoreModule(pl.LightningModule):
         self,
         n_channels: int,
         max_len: int,
-        noise_scheduler: DDPMScheduler | SDE,
+        noise_scheduler: SDE,
         fourier_noise_scaling: bool = True,
         d_model: int = 60,
         num_layers: int = 3,
@@ -136,20 +137,7 @@ class ScoreModule(pl.LightningModule):
     ]:
         # Depending on the scheduler, get the right loss function
 
-        if isinstance(self.noise_scheduler, DDPMScheduler):
-            assert hasattr(self.noise_scheduler, "config")
-            scheduler_config = self.noise_scheduler.config
-            self.max_time = scheduler_config.num_train_timesteps
-
-            training_loss_fn = get_ddpm_loss(
-                scheduler=self.noise_scheduler, train=True, max_time=self.max_time
-            )
-            validation_loss_fn = get_ddpm_loss(
-                scheduler=self.noise_scheduler, train=False, max_time=self.max_time
-            )
-            return training_loss_fn, validation_loss_fn
-
-        elif isinstance(self.noise_scheduler, SDE):
+        if isinstance(self.noise_scheduler, SDE):
             training_loss_fn = get_sde_loss_fn(
                 scheduler=self.noise_scheduler,
                 train=True,
@@ -169,13 +157,161 @@ class ScoreModule(pl.LightningModule):
             )
 
     def set_time_encoder(self) -> TimeEncoding | GaussianFourierProjection:
-        if isinstance(self.noise_scheduler, DDPMScheduler):
-            return TimeEncoding(d_model=self.d_model, max_time=self.max_time)
-
-        elif isinstance(self.noise_scheduler, SDE):
+        if isinstance(self.noise_scheduler, SDE):
             return GaussianFourierProjection(d_model=self.d_model)
 
         else:
             raise NotImplementedError(
                 f"Scheduler {self.noise_scheduler} not implemented yet, cannot set time encoder."
             )
+
+
+class MLPScoreModule(ScoreModule):
+    def __init__(
+        self,
+        n_channels: int,
+        max_len: int,
+        noise_scheduler: SDE,
+        fourier_noise_scaling: bool = True,
+        d_model: int = 72,
+        d_mlp: int = 512,
+        num_layers: int = 3,
+        num_training_steps: int = 1000,
+        lr_max: float = 1e-3,
+        likelihood_weighting: bool = False,
+    ) -> None:
+        super().__init__(
+            n_channels=n_channels,
+            max_len=max_len,
+            noise_scheduler=noise_scheduler,
+            fourier_noise_scaling=fourier_noise_scaling,
+            d_model=d_model,
+            num_layers=num_layers,
+            n_head=1,
+            num_training_steps=num_training_steps,
+            lr_max=lr_max,
+            likelihood_weighting=likelihood_weighting,
+        )
+
+        # Change the components that should be different in our score model
+        self.embedder = nn.Linear(
+            in_features=max_len * n_channels, out_features=d_model
+        )
+        self.unembedder = nn.Linear(
+            in_features=d_model, out_features=max_len * n_channels
+        )
+
+        self.backbone = nn.ModuleList(  # type: ignore
+            [
+                MLP(in_channels=d_model, hidden_channels=[d_mlp, d_model], dropout=0.1)
+                for _ in range(num_layers)
+            ]
+        )
+        self.pos_encoder = None
+
+        # Save all hyperparameters for checkpointing
+        self.save_hyperparameters()
+
+    def forward(self, batch: DiffusableBatch) -> torch.Tensor:
+        X = batch.X
+        assert X.size()[1:] == (
+            self.max_len,
+            self.n_channels,
+        ), f"X has wrong shape, should be {(X.size(0), self.max_len, self.n_channels)}, but is {X.size()}"
+
+        timesteps = batch.timesteps
+        assert timesteps is not None and timesteps.size(0) == len(batch)
+
+        # Flatten the tensor
+        X = rearrange(X, "b t c -> b (t c)")
+
+        # Channel embedding
+        X = self.embedder(X)
+
+        # Add time encoding
+        X = self.time_encoder(X, timesteps, use_time_axis=False)
+
+        # Backbone
+        for layer in self.backbone:  # type: ignore
+            X = X + layer(X)
+
+        # Channel unembedding
+        X = self.unembedder(X)
+
+        # Unflatten the tensor
+        X = rearrange(X, "b (t c) -> b t c", t=self.max_len, c=self.n_channels)
+
+        assert isinstance(X, torch.Tensor)
+
+        return X
+
+
+class LSTMScoreModule(ScoreModule):
+    def __init__(
+        self,
+        n_channels: int,
+        max_len: int,
+        noise_scheduler: SDE,
+        fourier_noise_scaling: bool = True,
+        d_model: int = 72,
+        num_layers: int = 3,
+        num_training_steps: int = 1000,
+        lr_max: float = 1e-3,
+        likelihood_weighting: bool = False,
+    ) -> None:
+        super().__init__(
+            n_channels=n_channels,
+            max_len=max_len,
+            noise_scheduler=noise_scheduler,
+            fourier_noise_scaling=fourier_noise_scaling,
+            d_model=d_model,
+            num_layers=num_layers,
+            n_head=1,
+            num_training_steps=num_training_steps,
+            lr_max=lr_max,
+            likelihood_weighting=likelihood_weighting,
+        )
+
+        # Change the components that should be different in our score model
+        self.backbone = nn.ModuleList(  # type: ignore
+            [
+                nn.LSTM(
+                    input_size=d_model,
+                    hidden_size=d_model,
+                    batch_first=True,
+                    bidirectional=False,
+                )
+                for _ in range(num_layers)
+            ]
+        )
+        self.pos_encoder = None
+
+        # Save all hyperparameters for checkpointing
+        self.save_hyperparameters()
+
+    def forward(self, batch: DiffusableBatch) -> torch.Tensor:
+        X = batch.X
+        assert X.size()[1:] == (
+            self.max_len,
+            self.n_channels,
+        ), f"X has wrong shape, should be {(X.size(0), self.max_len, self.n_channels)}, but is {X.size()}"
+
+        timesteps = batch.timesteps
+        assert timesteps is not None and timesteps.size(0) == len(batch)
+
+        # Channel embedding
+        X = self.embedder(X)
+
+        # Add time encoding
+        X = self.time_encoder(X, timesteps)
+
+        # Backbone
+        for layer in self.backbone:  # type: ignore
+            X = X + layer(X)[0]
+
+        # Channel unembedding
+        X = self.unembedder(X)
+
+        assert isinstance(X, torch.Tensor)
+
+        return X

@@ -1,2 +1,0 @@
-_target_: diffusers.DDPMScheduler
-num_train_timesteps: 1000

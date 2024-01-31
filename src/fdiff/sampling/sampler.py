@@ -1,11 +1,9 @@
 from typing import Optional
 
 import torch
-from diffusers import DDPMScheduler
 from tqdm import tqdm
 
 from fdiff.models.score_models import ScoreModule
-from fdiff.schedulers.ddpm import CustomDDPMScheduler
 from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
 
@@ -18,10 +16,6 @@ class DiffusionSampler:
     ) -> None:
         self.score_model = score_model
         self.noise_scheduler = score_model.noise_scheduler
-
-        # Disable clipping for the noise scheduler
-        if isinstance(self.noise_scheduler, (DDPMScheduler, CustomDDPMScheduler)):
-            self.noise_scheduler.config.clip_sample = False
 
         self.sample_batch_size = sample_batch_size
         self.n_channels = score_model.n_channels
@@ -97,9 +91,9 @@ class DiffusionSampler:
                     timesteps = torch.full(
                         (batch_size,),
                         t,
-                        dtype=torch.long
-                        if isinstance(t.item(), int)
-                        else torch.float32,
+                        dtype=(
+                            torch.long if isinstance(t.item(), int) else torch.float32
+                        ),
                         device=self.score_model.device,
                         requires_grad=False,
                     )
@@ -115,15 +109,8 @@ class DiffusionSampler:
         return torch.cat(all_samples, dim=0)
 
     def sample_prior(self, batch_size: int) -> torch.Tensor:
-        # depending on the scheduler, the prior distribution might be different
-        if isinstance(self.noise_scheduler, DDPMScheduler):
-            X = torch.randn(
-                (batch_size, self.max_len, self.n_channels),
-                device=self.score_model.device,
-                requires_grad=False,
-            )
-
-        elif isinstance(self.noise_scheduler, SDE):
+        # Sample from the prior distribution
+        if isinstance(self.noise_scheduler, SDE):
             X = self.noise_scheduler.prior_sampling(
                 (batch_size, self.max_len, self.n_channels)
             ).to(device=self.score_model.device)
@@ -131,4 +118,5 @@ class DiffusionSampler:
         else:
             raise NotImplementedError("Scheduler not recognized.")
 
+        assert isinstance(X, torch.Tensor)
         return X

@@ -3,7 +3,6 @@ from typing import Callable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from diffusers import DDPMScheduler
 
 from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
@@ -123,46 +122,6 @@ def get_sde_loss_fn(
             losses = reduce_op(losses.reshape(losses.shape[0], -1), dim=-1)  # type: ignore
 
         loss = torch.mean(losses)
-        return loss
-
-    return loss_fn
-
-
-def get_ddpm_loss(
-    scheduler: DDPMScheduler, train: bool, max_time: int
-) -> Callable[[nn.Module, DiffusableBatch], torch.Tensor]:
-    def loss_fn(model: nn.Module, batch: DiffusableBatch) -> torch.Tensor:
-        if train:
-            model.train()
-        else:
-            model.eval()
-
-        X = batch.X
-        timesteps = batch.timesteps
-
-        # If no timesteps are provided, sample them randomly
-        if timesteps is None:
-            timesteps = torch.randint(
-                low=0,
-                high=max_time,
-                size=(len(batch),),
-                dtype=torch.long,
-                device=batch.device,
-            )
-
-        noise = torch.randn_like(X, device=batch.device)
-
-        assert hasattr(scheduler, "add_noise")
-
-        # Add the noise to obtain x(t) given x(0)
-        X_noisy = scheduler.add_noise(
-            original_samples=X, noise=noise, timesteps=timesteps
-        )
-        noisy_batch = DiffusableBatch(X=X_noisy, y=batch.y, timesteps=timesteps)
-
-        # Predict noise from score model
-        noise_pred = model(noisy_batch)
-        loss = F.mse_loss(noise_pred, noise)
         return loss
 
     return loss_fn
