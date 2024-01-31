@@ -11,7 +11,7 @@ from fdiff.dataloaders.datamodules import Datamodule
 from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.metrics import MetricCollection
 from fdiff.sampling.sampler import DiffusionSampler
-from fdiff.utils.extraction import dict_to_str, get_best_checkpoint, get_model_typle
+from fdiff.utils.extraction import dict_to_str, get_best_checkpoint, get_model_type
 from fdiff.utils.fourier import idft
 
 
@@ -48,7 +48,7 @@ class SamplingRunner:
 
         # Load score model from checkpoint
         best_checkpoint_path = get_best_checkpoint(self.save_dir / "checkpoints")
-        model_type = get_model_typle(train_cfg)
+        model_type = get_model_type(train_cfg)
         self.score_model = model_type.load_from_checkpoint(
             checkpoint_path=best_checkpoint_path
         )

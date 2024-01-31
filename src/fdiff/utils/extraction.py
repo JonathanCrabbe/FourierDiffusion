@@ -55,7 +55,7 @@ def flatten_config(cfg: DictConfig | dict) -> dict[str, Any]:
     return cfg_flat
 
 
-def get_model_typle(cfg: DictConfig | dict) -> ScoreModule | MLPScoreModule:
+def get_model_type(cfg: DictConfig | dict) -> ScoreModule | MLPScoreModule:
     """Get the model type from a config.
 
     Args:
