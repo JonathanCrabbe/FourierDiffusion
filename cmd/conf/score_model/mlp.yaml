@@ -1,6 +1,6 @@
 _target_: fdiff.models.score_models.MLPScoreModule
 _partial_: true
-d_model: 128
+d_model: 72
 d_mlp: 1024
 num_layers: 10
 lr_max: 1.0e-4
