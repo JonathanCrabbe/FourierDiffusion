@@ -4,7 +4,6 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from diffusers import DDPMScheduler
 from diffusers.optimization import get_cosine_schedule_with_warmup
 from einops import rearrange
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
@@ -17,7 +16,7 @@ from fdiff.models.transformer import (
 )
 from fdiff.schedulers.sde import SDE
 from fdiff.utils.dataclasses import DiffusableBatch
-from fdiff.utils.losses import get_ddpm_loss, get_sde_loss_fn
+from fdiff.utils.losses import get_sde_loss_fn
 
 
 class ScoreModule(pl.LightningModule):
@@ -25,7 +24,7 @@ class ScoreModule(pl.LightningModule):
         self,
         n_channels: int,
         max_len: int,
-        noise_scheduler: DDPMScheduler | SDE,
+        noise_scheduler: SDE,
         fourier_noise_scaling: bool = True,
         d_model: int = 60,
         num_layers: int = 3,
@@ -138,20 +137,7 @@ class ScoreModule(pl.LightningModule):
     ]:
         # Depending on the scheduler, get the right loss function
 
-        if isinstance(self.noise_scheduler, DDPMScheduler):
-            assert hasattr(self.noise_scheduler, "config")
-            scheduler_config = self.noise_scheduler.config
-            self.max_time = scheduler_config.num_train_timesteps
-
-            training_loss_fn = get_ddpm_loss(
-                scheduler=self.noise_scheduler, train=True, max_time=self.max_time
-            )
-            validation_loss_fn = get_ddpm_loss(
-                scheduler=self.noise_scheduler, train=False, max_time=self.max_time
-            )
-            return training_loss_fn, validation_loss_fn
-
-        elif isinstance(self.noise_scheduler, SDE):
+        if isinstance(self.noise_scheduler, SDE):
             training_loss_fn = get_sde_loss_fn(
                 scheduler=self.noise_scheduler,
                 train=True,
@@ -171,10 +157,7 @@ class ScoreModule(pl.LightningModule):
             )
 
     def set_time_encoder(self) -> TimeEncoding | GaussianFourierProjection:
-        if isinstance(self.noise_scheduler, DDPMScheduler):
-            return TimeEncoding(d_model=self.d_model, max_time=self.max_time)
-
-        elif isinstance(self.noise_scheduler, SDE):
+        if isinstance(self.noise_scheduler, SDE):
             return GaussianFourierProjection(d_model=self.d_model)
 
         else:
@@ -188,7 +171,7 @@ class MLPScoreModule(ScoreModule):
         self,
         n_channels: int,
         max_len: int,
-        noise_scheduler: DDPMScheduler | SDE,
+        noise_scheduler: SDE,
         fourier_noise_scaling: bool = True,
         d_model: int = 72,
         d_mlp: int = 512,
@@ -268,7 +251,7 @@ class LSTMScoreModule(ScoreModule):
         self,
         n_channels: int,
         max_len: int,
-        noise_scheduler: DDPMScheduler | SDE,
+        noise_scheduler: SDE,
         fourier_noise_scaling: bool = True,
         d_model: int = 72,
         num_layers: int = 3,

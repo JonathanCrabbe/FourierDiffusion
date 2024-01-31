@@ -3,9 +3,9 @@ from copy import deepcopy
 import pytest
 import pytorch_lightning as pl
 import torch
-from diffusers import DDPMScheduler
 
 from fdiff.models.score_models import LSTMScoreModule, MLPScoreModule, ScoreModule
+from fdiff.schedulers.sde import VPScheduler
 from fdiff.utils.dataclasses import DiffusableBatch
 
 from .test_datamodules import DummyDatamodule
@@ -20,7 +20,7 @@ n_diffusion_steps = 10
 
 
 def instantiate_score_model(backbone_type: str) -> ScoreModule:
-    noise_scheduler = DDPMScheduler(num_train_timesteps=n_diffusion_steps)
+    noise_scheduler = VPScheduler()
     match backbone_type:
         case "transformer":
             score_model = ScoreModule(
@@ -83,6 +83,7 @@ def test_score_module(backbone_type: str) -> None:
     params_after = deepcopy(score_model.state_dict())
 
     for param_name in params_before:
-        assert not torch.allclose(
-            params_before[param_name], params_after[param_name]
-        ), f"Parameter {param_name} did not change during training"
+        if param_name != "time_encoder.W":
+            assert not torch.allclose(
+                params_before[param_name], params_after[param_name]
+            ), f"Parameter {param_name} did not change during training"

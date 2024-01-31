@@ -1,5 +1,4 @@
 import pytest
-from diffusers import DDPMScheduler
 
 from fdiff.models.score_models import ScoreModule
 from fdiff.sampling.sampler import DiffusionSampler
@@ -15,14 +14,11 @@ num_samples = 48
 @pytest.mark.parametrize(
     "noise_scheduler",
     [
-        DDPMScheduler(
-            num_train_timesteps=10,
-        ),
         VPScheduler(),
         VEScheduler(),
     ],
 )
-def test_sampler(noise_scheduler: DDPMScheduler | SDE) -> None:
+def test_sampler(noise_scheduler: SDE) -> None:
     # Create a score model
     score_model = ScoreModule(
         n_channels=n_channels, max_len=max_len, noise_scheduler=noise_scheduler
