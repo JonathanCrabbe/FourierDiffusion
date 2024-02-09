@@ -16,7 +16,7 @@ conda activate fdiff
 ```
 3. Install the requirement.
 ```shell
-pip install -e .
+pip install freqdiff
 ```
 
 4. If you intend to train models, make sure that wandb is correctly configured on your machine by following [this guide](https://docs.wandb.ai/quickstart). 
@@ -62,7 +62,7 @@ One can then reproduce the plots in the paper by including the  `run_id` to the 
 If you wish to contribute, please make sure that your code is compliant with our tests and coding conventions. To do so, you should install the required testing packages with:
 
 ```shell
-pip install -e .[test]
+pip install freqdiff[test]
 ```
 
 Then, you can run the tests with:
