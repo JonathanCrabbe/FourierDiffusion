@@ -25,9 +25,9 @@ maintainers = [
 classifiers = [
   "Development Status :: 3 - Alpha",
 
-  "Intended Audience :: Researchers",
+  "Intended Audience :: Science/Research",
 
-  "Topic :: Generative AI :: Diffusion",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
 
   "License :: OSI Approved :: MIT License",
 
