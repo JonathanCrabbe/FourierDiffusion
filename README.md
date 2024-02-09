@@ -1,7 +1,7 @@
 # Time Series Diffusion in the Frequency Domain
 
 This repository implements time series diffusion in the frequency domain.
-For more details, please read our paper: 'Time Series Diffusion in the Frequency Domain'.
+For more details, please read our paper: [Time Series Diffusion in the Frequency Domain](https://arxiv.org/abs/2402.05933).
  
 # 1. Install
 
@@ -75,4 +75,18 @@ Before any commit, please make sure that your staged code is compliant with our 
 
 ```shell
 pre-commit
+```
+
+# 4. Cite us
+If you use this code, please acknowledge our work by citing
+
+```
+@misc{crabbé2024time,
+      title={Time Series Diffusion in the Frequency Domain}, 
+      author={Jonathan Crabbé and Nicolas Huynh and Jan Stanczuk and Mihaela van der Schaar},
+      year={2024},
+      eprint={2402.05933},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
 ```
