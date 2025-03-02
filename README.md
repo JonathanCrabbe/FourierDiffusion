@@ -11,7 +11,7 @@ From repository:
 2. Create and activate a new environment with conda (with `Python 3.10` or newer).
 
 ```shell
-conda env create -n fdiff python=3.10
+conda create -n fdiff python=3.10
 conda activate fdiff
 ```
 3. Install the requirement.
